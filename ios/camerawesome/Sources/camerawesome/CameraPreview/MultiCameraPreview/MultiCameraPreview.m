@@ -213,9 +213,15 @@
   });
 }
 
-- (void)configInitialSession:(NSArray<PigeonSensor *> *)sensors {  
+- (void)configInitialSession:(NSArray<PigeonSensor *> *)sensors {
   self.cameraSession = [[AVCaptureMultiCamSession alloc] init];
-  
+
+  // CRITICAL FIX: Disable automatic AVAudioSession configuration
+  // Fixes iOS bug where subsequent video recordings lose audio (#30689, #131553)
+  // CameraAwesome's auto-configuration interferes with proper audio session management
+  // By disabling this, we rely on the app's proper AVAudioSession setup in AppDelegate
+  self.cameraSession.automaticallyConfiguresApplicationAudioSession = NO;
+
   for (int i = 0; i < [sensors count]; i++) {
     CameraPreviewTexture *previewTexture = [[CameraPreviewTexture alloc] init];
     [self.textures addObject:previewTexture];

@@ -36,6 +36,13 @@
   
   // Creating capture session
   _captureSession = [[AVCaptureSession alloc] init];
+
+  // CRITICAL FIX: Disable automatic AVAudioSession configuration
+  // Fixes iOS bug where subsequent video recordings lose audio (#30689, #131553)
+  // CameraAwesome's auto-configuration interferes with proper audio session management
+  // By disabling this, we rely on the app's proper AVAudioSession setup in AppDelegate
+  _captureSession.automaticallyConfiguresApplicationAudioSession = NO;
+
   _captureVideoOutput = [AVCaptureVideoDataOutput new];
   _captureVideoOutput.videoSettings = @{(NSString*)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
   [_captureVideoOutput setAlwaysDiscardsLateVideoFrames:YES];
