@@ -599,6 +599,10 @@
 # pragma mark - Audio
 /// Setup audio channel to record audio
 - (void)setUpCaptureSessionForAudioError:(nonnull void (^)(NSError *))error {
+  // Batch all configuration changes to prevent intermediate session reconfigurations
+  // This prevents preview flicker and ensures smooth user experience
+  [_captureSession beginConfiguration];
+
   // CRITICAL FIX: Remove existing audio inputs before adding new ones
   // Fixes issue where subsequent video recordings fail because audio input already exists
   // This is the actual root cause of Flutter issues #30689 and #131553
@@ -623,7 +627,9 @@
   AVCaptureDeviceInput *audioInput = [AVCaptureDeviceInput deviceInputWithDevice:audioDevice
                                                                            error:&audioError];
   if (audioError) {
+    [_captureSession commitConfiguration];
     error(audioError);
+    return;
   }
 
   // Setup the audio output.
@@ -639,6 +645,9 @@
       [_videoController setIsAudioSetup:NO];
     }
   }
+
+  // Commit all changes atomically
+  [_captureSession commitConfiguration];
 }
 
 # pragma mark - Camera Delegates
