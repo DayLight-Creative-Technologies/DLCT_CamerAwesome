@@ -599,6 +599,23 @@
 # pragma mark - Audio
 /// Setup audio channel to record audio
 - (void)setUpCaptureSessionForAudioError:(nonnull void (^)(NSError *))error {
+  // CRITICAL FIX: Remove existing audio inputs before adding new ones
+  // Fixes issue where subsequent video recordings fail because audio input already exists
+  // This is the actual root cause of Flutter issues #30689 and #131553
+  for (AVCaptureInput *input in [_captureSession inputs]) {
+    for (AVCaptureInputPort *port in input.ports) {
+      if ([[port mediaType] isEqual:AVMediaTypeAudio]) {
+        [_captureSession removeInput:input];
+        break;
+      }
+    }
+  }
+
+  // Remove existing audio output if present
+  if (_audioOutput != nil) {
+    [_captureSession removeOutput:_audioOutput];
+  }
+
   NSError *audioError = nil;
   // Create a device input with the device and add it to the session.
   // Setup the audio input.
@@ -608,13 +625,13 @@
   if (audioError) {
     error(audioError);
   }
-  
+
   // Setup the audio output.
   _audioOutput = [[AVCaptureAudioDataOutput alloc] init];
-  
+
   if ([_captureSession canAddInput:audioInput]) {
     [_captureSession addInput:audioInput];
-    
+
     if ([_captureSession canAddOutput:_audioOutput]) {
       [_captureSession addOutput:_audioOutput];
       [_videoController setIsAudioSetup:YES];
