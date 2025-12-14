@@ -643,7 +643,17 @@
       [_videoController setIsAudioSetup:YES];
     } else {
       [_videoController setIsAudioSetup:NO];
+      [_captureSession commitConfiguration];
+      error([NSError errorWithDomain:@"CameraAwesome" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"Cannot add audio output to capture session"}]);
+      return;
     }
+  } else {
+    // CRITICAL: If we can't add audio input, mark audio as not setup and report error
+    // This prevents the recording from starting in an invalid state
+    [_videoController setIsAudioSetup:NO];
+    [_captureSession commitConfiguration];
+    error([NSError errorWithDomain:@"CameraAwesome" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"Cannot add audio input to capture session"}]);
+    return;
   }
 
   // Commit all changes atomically
