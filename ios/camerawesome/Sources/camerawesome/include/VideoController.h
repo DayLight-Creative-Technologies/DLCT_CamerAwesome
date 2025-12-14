@@ -18,6 +18,7 @@ typedef void(^OnVideoWriterSetup)(void);
 @interface VideoController : NSObject
 
 @property(readonly, nonatomic) bool isRecording;
+@property(readonly, nonatomic) bool isStopping;
 @property(readonly, nonatomic) bool isPaused;
 @property(readonly, nonatomic) bool isAudioEnabled;
 @property(readonly, nonatomic) bool isAudioSetup;

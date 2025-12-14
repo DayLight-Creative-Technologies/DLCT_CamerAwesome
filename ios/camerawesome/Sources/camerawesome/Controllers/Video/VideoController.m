@@ -14,9 +14,10 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
 - (instancetype)init {
   self = [super init];
   _isRecording = NO;
+  _isStopping = NO;
   _isAudioEnabled = YES;
   _isPaused = NO;
-  
+
   return self;
 }
 
@@ -51,24 +52,43 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
 
 /// Stop recording video
 - (void)stopRecordingVideo:(nonnull void (^)(NSNumber * _Nullable, FlutterError * _Nullable))completion {
+  // CRITICAL FIX: Prevent concurrent stop calls (race condition from user tap + app backgrounding)
+  // If already stopping, return success immediately to prevent state corruption
+  if (_isStopping) {
+    completion(@(YES), nil);
+    return;
+  }
+
+  // If not recording, return error
+  if (!_isRecording) {
+    completion(@(NO), [FlutterError errorWithCode:@"VIDEO_ERROR" message:@"video is not recording" details:@""]);
+    return;
+  }
+
+  // Mark as stopping to prevent concurrent calls
+  _isStopping = YES;
+  _isRecording = NO;
+
   if (_options && _options.fps != nil && _options.fps > 0) {
     // Reset camera FPS
     [self adjustCameraFPS:@(30)];
   }
-  
-  if (_isRecording) {
-    _isRecording = NO;
-    if (_videoWriter.status != AVAssetWriterStatusUnknown) {
-      [_videoWriter finishWritingWithCompletionHandler:^{
-        if (self->_videoWriter.status == AVAssetWriterStatusCompleted) {
-          completion(@(YES), nil);
-        } else {
-          completion(@(NO), [FlutterError errorWithCode:@"VIDEO_ERROR" message:@"impossible to completely write video" details:@""]);
-        }
-      }];
-    }
+
+  if (_videoWriter.status != AVAssetWriterStatusUnknown) {
+    [_videoWriter finishWritingWithCompletionHandler:^{
+      // Reset stopping flag when complete
+      self->_isStopping = NO;
+
+      if (self->_videoWriter.status == AVAssetWriterStatusCompleted) {
+        completion(@(YES), nil);
+      } else {
+        completion(@(NO), [FlutterError errorWithCode:@"VIDEO_ERROR" message:@"impossible to completely write video" details:@""]);
+      }
+    }];
   } else {
-    completion(@(NO), [FlutterError errorWithCode:@"VIDEO_ERROR" message:@"video is not recording" details:@""]);
+    // Reset stopping flag if writer status is unknown
+    _isStopping = NO;
+    completion(@(NO), [FlutterError errorWithCode:@"VIDEO_ERROR" message:@"video writer in unknown state" details:@""]);
   }
 }
 
