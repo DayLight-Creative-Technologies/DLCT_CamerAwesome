@@ -204,13 +204,19 @@ class AwesomeCameraPreviewState extends State<AwesomeCameraPreview> {
                   ),
                 ),
               ),
-              if (widget.previewDecoratorBuilder != null && _preview != null)
+              if (widget.previewDecoratorBuilder != null)
                 Positioned.fill(
                   child: OrientationBuilder(
                     builder: (context, orientation) {
                       // Wrap decorator with OrientationBuilder to ensure it rebuilds
                       // when device orientation changes
-                      debugPrint('📱 CameraAwesome: OrientationBuilder triggered - orientation: $orientation');
+                      debugPrint('📱 CameraAwesome: OrientationBuilder triggered - orientation: $orientation, preview ready: ${_preview != null}');
+
+                      // Only render decorator when preview is ready
+                      if (_preview == null) {
+                        return const SizedBox.shrink();
+                      }
+
                       return widget.previewDecoratorBuilder!(
                         widget.state,
                         _preview!,
