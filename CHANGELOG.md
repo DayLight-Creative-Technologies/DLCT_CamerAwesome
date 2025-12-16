@@ -1,3 +1,8 @@
+# 2.5.4
+
+- 🎨 Add 16px bottom spacing to zoom selector for better visual separation from mode selector
+- Improves spacing between "1.0X" zoom indicator and "PHOTO/VIDEO" mode buttons
+
 # 2.5.3
 
 - 🐛 Keep portrait lock in CameraAwesome UI for proper button positioning

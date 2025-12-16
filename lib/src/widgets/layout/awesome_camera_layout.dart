@@ -34,7 +34,10 @@ class AwesomeCameraLayout extends StatelessWidget {
                 if (state is PhotoCameraState && state.hasFilters)
                   AwesomeFilterWidget(state: state)
                 else if (!kIsWeb && Platform.isAndroid)
-                  AwesomeZoomSelector(state: state),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: AwesomeZoomSelector(state: state),
+                  ),
                 AwesomeCameraModeSelector(state: state),
               ],
             )),
