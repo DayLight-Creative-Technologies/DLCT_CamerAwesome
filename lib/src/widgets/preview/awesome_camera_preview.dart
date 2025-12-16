@@ -210,6 +210,7 @@ class AwesomeCameraPreviewState extends State<AwesomeCameraPreview> {
                     builder: (context, orientation) {
                       // Wrap decorator with OrientationBuilder to ensure it rebuilds
                       // when device orientation changes
+                      debugPrint('📱 CameraAwesome: OrientationBuilder triggered - orientation: $orientation');
                       return widget.previewDecoratorBuilder!(
                         widget.state,
                         _preview!,
