@@ -1,3 +1,8 @@
+# 2.5.5
+
+- 🐛 Keep portrait lock in place (no changes to orientation behavior)
+- Supports landscape drawer positioning via portrait coordinate system
+
 # 2.5.4
 
 - 🎨 Add 16px bottom spacing to zoom selector for better visual separation from mode selector

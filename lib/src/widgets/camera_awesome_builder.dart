@@ -365,7 +365,6 @@ class _CameraWidgetBuilder extends State<CameraAwesomeBuilder>
   void didChangeDependencies() {
     // Keep CameraAwesome UI locked to portrait orientation
     // This ensures buttons stay positioned correctly (on right side)
-    // The previewDecoratorBuilder can still detect real device orientation via View.of(context)
     debugPrint('📱 CameraAwesome: didChangeDependencies - locking UI to portrait');
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.didChangeDependencies();
