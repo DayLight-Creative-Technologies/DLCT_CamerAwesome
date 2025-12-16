@@ -1,3 +1,9 @@
+# 2.5.3
+
+- 🐛 **CRITICAL**: Remove hardcoded portrait-only orientation lock in didChangeDependencies
+- Allows parent widgets to control device orientation instead of forcing portrait
+- Fixes Quick Scoreboard drawer not responding to orientation changes
+
 # 2.5.2
 
 - 🐛 Fix previewDecoratorBuilder not rebuilding on device orientation changes by wrapping with OrientationBuilder
