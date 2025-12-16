@@ -1,5 +1,13 @@
+# 2.5.2
+
+- 🐛 Fix previewDecoratorBuilder not rebuilding on device orientation changes by wrapping with OrientationBuilder
+
+# 2.5.1
+
+- Internal fixes (DLCT custom fork)
+
 # 2.5.0
-- Fix iOS camera zoom change crash (thanks @haf and @chaosue) 
+- Fix iOS camera zoom change crash (thanks @haf and @chaosue)
 - Fix camera preview not accurate with the result photo
 
 # 2.4.0
