@@ -1,10 +1,10 @@
 # 2.5.3
 
-- 🐛 **CRITICAL**: Remove hardcoded portrait-only orientation lock in didChangeDependencies
-- Allows parent widgets to control device orientation instead of forcing portrait
-- Fixes Quick Scoreboard drawer not responding to orientation changes
+- 🐛 Keep portrait lock in CameraAwesome UI for proper button positioning
+- 🐛 Fix previewDecoratorBuilder to use View.of(context) for real device orientation detection
 - Add logging to AwesomeOrientedWidget to debug native orientation stream
 - Add logging to camera_awesome_builder didChangeDependencies
+- Allows decorators to detect device rotation while keeping UI elements upright
 
 # 2.5.2
 

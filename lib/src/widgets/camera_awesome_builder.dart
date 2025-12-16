@@ -363,10 +363,11 @@ class _CameraWidgetBuilder extends State<CameraAwesomeBuilder>
 
   @override
   void didChangeDependencies() {
-    // REMOVED: SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    // This was forcing portrait-only mode and preventing device rotation.
-    // AwesomeOrientedWidget should handle rotating UI elements to stay upright.
-    debugPrint('📱 CameraAwesome: didChangeDependencies - checking native orientation stream');
+    // Keep CameraAwesome UI locked to portrait orientation
+    // This ensures buttons stay positioned correctly (on right side)
+    // The previewDecoratorBuilder can still detect real device orientation via View.of(context)
+    debugPrint('📱 CameraAwesome: didChangeDependencies - locking UI to portrait');
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.didChangeDependencies();
   }
 
