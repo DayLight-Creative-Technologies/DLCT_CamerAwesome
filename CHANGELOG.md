@@ -3,6 +3,8 @@
 - 🐛 **CRITICAL**: Remove hardcoded portrait-only orientation lock in didChangeDependencies
 - Allows parent widgets to control device orientation instead of forcing portrait
 - Fixes Quick Scoreboard drawer not responding to orientation changes
+- Add logging to AwesomeOrientedWidget to debug native orientation stream
+- Add logging to camera_awesome_builder didChangeDependencies
 
 # 2.5.2
 

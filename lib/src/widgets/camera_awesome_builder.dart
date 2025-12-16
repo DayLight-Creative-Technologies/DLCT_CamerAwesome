@@ -364,8 +364,9 @@ class _CameraWidgetBuilder extends State<CameraAwesomeBuilder>
   @override
   void didChangeDependencies() {
     // REMOVED: SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    // This was forcing portrait-only mode and preventing parent widgets from
-    // controlling orientation. Let the parent widget manage orientation instead.
+    // This was forcing portrait-only mode and preventing device rotation.
+    // AwesomeOrientedWidget should handle rotating UI elements to stay upright.
+    debugPrint('📱 CameraAwesome: didChangeDependencies - checking native orientation stream');
     super.didChangeDependencies();
   }
 

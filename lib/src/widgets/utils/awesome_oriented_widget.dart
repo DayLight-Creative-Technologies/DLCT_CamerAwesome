@@ -28,12 +28,15 @@ class AwesomeOrientedWidgetState extends State<AwesomeOrientedWidget> {
         stream: CamerawesomePlugin.getNativeOrientation(),
         builder: (_, orientationSnapshot) {
           final orientation = orientationSnapshot.data;
+          debugPrint('📱 AwesomeOrientedWidget: Native orientation stream - data: $orientation, hasData: ${orientationSnapshot.hasData}');
+
           if (orientation != null && orientation != previousOrientation) {
             turns = shortestTurnsToReachTarget(
               current: turns,
               target: getTurns(orientation),
             );
             previousOrientation = orientation;
+            debugPrint('📱 AwesomeOrientedWidget: Rotating to $turns turns for orientation $orientation');
           }
 
           return AnimatedRotation(
