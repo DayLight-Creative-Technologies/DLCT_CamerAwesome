@@ -31,12 +31,24 @@
     if (enablePhysicalButton) {
       [_physicalButtonController startListening];
     }
-    
+
     [_motionController startMotionDetection];
-    
+
     [self configInitialSession:sensors];
+
+    // CRITICAL FIX: Add observers for session errors and interruptions
+    // Fixes preview freeze after video recording stops (error -11800/-10868)
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(handleSessionRuntimeError:)
+                                                 name:AVCaptureSessionRuntimeErrorNotification
+                                               object:_captureSession];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(handleSessionDidStopRunning:)
+                                                 name:AVCaptureSessionDidStopRunningNotification
+                                               object:_captureSession];
   }
-  
+
   return self;
 }
 
@@ -54,9 +66,56 @@
   }
 }
 
+#pragma mark - Session Error Handling
+
+/// Handle AVCaptureSession runtime errors (e.g., error -11800 after stopping video)
+/// Automatically restarts the session to prevent frozen preview
+- (void)handleSessionRuntimeError:(NSNotification *)notification {
+  NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
+  NSLog(@"⚠️ AVCaptureSession runtime error: %@", error);
+
+  // Error -11800 (with underlying -10868) occurs after stopping video recording
+  // The session tries to reconfigure audio inputs/outputs and fails
+  // Solution: Restart the session to recover from the error
+  if (error.code == AVErrorUnknown || error.code == -11800) {
+    NSLog(@"📸 Attempting to restart session after error...");
+    dispatch_async(dispatch_get_main_queue(), ^{
+      if (![self->_captureSession isRunning]) {
+        NSLog(@"📸 Session stopped - restarting now");
+        [self->_captureSession startRunning];
+        NSLog(@"✅ Session restarted successfully");
+      } else {
+        NSLog(@"✅ Session still running - no restart needed");
+      }
+    });
+  }
+}
+
+/// Handle AVCaptureSession stopped unexpectedly
+/// Restarts the session to prevent frozen preview
+- (void)handleSessionDidStopRunning:(NSNotification *)notification {
+  NSLog(@"⚠️ AVCaptureSession stopped unexpectedly");
+
+  // Session stopped (likely due to runtime error during reconfiguration)
+  // Restart it to resume preview
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSLog(@"📸 Restarting stopped session...");
+    [self->_captureSession startRunning];
+    NSLog(@"✅ Session restarted after unexpected stop");
+  });
+}
+
 - (void)dispose {
   [self stop];
   [self cleanSession];
+
+  // Remove session error observers
+  [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                  name:AVCaptureSessionRuntimeErrorNotification
+                                                object:_captureSession];
+  [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                  name:AVCaptureSessionDidStopRunningNotification
+                                                object:_captureSession];
 }
 
 - (void)stop {
