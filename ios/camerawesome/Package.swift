@@ -12,12 +12,12 @@ let package = Package(
         .library(name: "camerawesome", targets: ["camerawesome"])
     ],
     dependencies: [
-
+        .package(url: "https://github.com/jpsim/JPSVolumeButtonHandler.git", branch: "master")
     ],
     targets: [
         .target(
             name: "camerawesome",
-            dependencies: [],
+            dependencies: ["JPSVolumeButtonHandler"],
             resources: [],
             publicHeadersPath: "",
             cSettings: [
