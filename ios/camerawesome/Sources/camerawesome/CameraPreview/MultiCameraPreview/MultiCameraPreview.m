@@ -41,12 +41,12 @@
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(handleSessionRuntimeError:)
                                                  name:AVCaptureSessionRuntimeErrorNotification
-                                               object:_captureSession];
+                                               object:_cameraSession];
 
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(handleSessionDidStopRunning:)
                                                  name:AVCaptureSessionDidStopRunningNotification
-                                               object:_captureSession];
+                                               object:_cameraSession];
   }
 
   return self;
@@ -80,9 +80,9 @@
   if (error.code == AVErrorUnknown || error.code == -11800) {
     NSLog(@"📸 Attempting to restart session after error...");
     dispatch_async(dispatch_get_main_queue(), ^{
-      if (![self->_captureSession isRunning]) {
+      if (![self->_cameraSession isRunning]) {
         NSLog(@"📸 Session stopped - restarting now");
-        [self->_captureSession startRunning];
+        [self->_cameraSession startRunning];
         NSLog(@"✅ Session restarted successfully");
       } else {
         NSLog(@"✅ Session still running - no restart needed");
@@ -112,10 +112,10 @@
   // Remove session error observers
   [[NSNotificationCenter defaultCenter] removeObserver:self
                                                   name:AVCaptureSessionRuntimeErrorNotification
-                                                object:_captureSession];
+                                                object:_cameraSession];
   [[NSNotificationCenter defaultCenter] removeObserver:self
                                                   name:AVCaptureSessionDidStopRunningNotification
-                                                object:_captureSession];
+                                                object:_cameraSession];
 }
 
 - (void)stop {
