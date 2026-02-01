@@ -100,7 +100,7 @@
   // Restart it to resume preview
   dispatch_async(dispatch_get_main_queue(), ^{
     NSLog(@"📸 Restarting stopped session...");
-    [self->_captureSession startRunning];
+    [self->_cameraSession startRunning];
     NSLog(@"✅ Session restarted after unexpected stop");
   });
 }
