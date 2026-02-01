@@ -8,7 +8,7 @@
 #import <Foundation/Foundation.h>
 #import <Flutter/Flutter.h>
 #import "PhysicalButton.h"
-#import <JPSVolumeButtonHandler/JPSVolumeButtonHandler.h>
+#import "JPSVolumeButtonHandler.h"
 
 NS_ASSUME_NONNULL_BEGIN
 

@@ -15,6 +15,7 @@ An open source camera plugin by the community for the community
   s.source           = { :path => '.' }
   s.source_files = 'camerawesome/Sources/camerawesome/**/*'
   s.dependency 'Flutter'
+  s.dependency 'JPSVolumeButtonHandler'
   s.platform = :ios, '8.0'
   s.ios.deployment_target = '12.0'
 
