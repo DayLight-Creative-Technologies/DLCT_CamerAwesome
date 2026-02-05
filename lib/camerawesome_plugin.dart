@@ -79,6 +79,7 @@ class CamerawesomePlugin {
       return true;
     }
     _orientationStream = null;
+    _physicalButtonStream = null;
     currentState = CameraRunningState.stopping;
     bool res;
     try {
