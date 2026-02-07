@@ -7,7 +7,9 @@
 
 #import "MultiCameraPreview.h"
 
-@implementation MultiCameraPreview
+@implementation MultiCameraPreview {
+  BOOL _enablePhysicalButton; // Track if physical buttons enabled
+}
 
 - (instancetype)initWithSensors:(NSArray<PigeonSensor *> *)sensors
               mirrorFrontCamera:(BOOL)mirrorFrontCamera
@@ -27,7 +29,8 @@
     _motionController = [[MotionController alloc] init];
     _locationController = [[LocationController alloc] init];
     _physicalButtonController = [[PhysicalButtonController alloc] init];
-    
+
+    _enablePhysicalButton = enablePhysicalButton; // Store flag for start/stop cycles
     if (enablePhysicalButton) {
       [_physicalButtonController startListening];
     }
@@ -119,6 +122,10 @@
 }
 
 - (void)stop {
+  // CRITICAL FIX: Stop volume button handler when camera stops
+  // Without this, volume buttons remain hijacked even after camera closes
+  [self.physicalButtonController stopListening];
+
   [self.cameraSession stopRunning];
 }
 
@@ -308,6 +315,12 @@
   dispatch_async(_dispatchQueue, ^{
     [self.cameraSession startRunning];
   });
+
+  // CRITICAL FIX: Restart volume button handler when camera starts
+  // This allows volume buttons to work again after stop/start cycles
+  if (_enablePhysicalButton) {
+    [self.physicalButtonController startListening];
+  }
 }
 
 - (CGSize)getEffectivPreviewSize {

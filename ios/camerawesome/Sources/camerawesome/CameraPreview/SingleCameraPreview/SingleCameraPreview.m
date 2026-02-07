@@ -9,6 +9,7 @@
 
 @implementation SingleCameraPreview {
   dispatch_queue_t _dispatchQueue;
+  BOOL _enablePhysicalButton; // Track if physical buttons enabled
 }
 
 - (instancetype)initWithCameraSensor:(PigeonSensorPosition)sensor
@@ -73,7 +74,8 @@
   _physicalButtonController = [[PhysicalButtonController alloc] init];
   
   [_motionController startMotionDetection];
-  
+
+  _enablePhysicalButton = enablePhysicalButton; // Store flag for start/stop cycles
   if (enablePhysicalButton) {
     [_physicalButtonController startListening];
   }
@@ -346,10 +348,20 @@
   dispatch_async(_dispatchQueue, ^{
     [self->_captureSession startRunning];
   });
+
+  // CRITICAL FIX: Restart volume button handler when camera starts
+  // This allows volume buttons to work again after stop/start cycles
+  if (_enablePhysicalButton) {
+    [self.physicalButtonController startListening];
+  }
 }
 
 /// Stop camera preview
 - (void)stop {
+  // CRITICAL FIX: Stop volume button handler when camera stops
+  // Without this, volume buttons remain hijacked even after camera closes
+  [self.physicalButtonController stopListening];
+
   [_captureSession stopRunning];
 }
 

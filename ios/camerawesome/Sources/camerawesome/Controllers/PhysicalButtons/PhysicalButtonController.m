@@ -19,6 +19,16 @@
     NSLog(@"📸 PhysicalButtonController: Volume DOWN detected");
     [self tryToSendPhysicalEvent:volume_down];
   }];
+
+  // CRITICAL FIX: Configure audio session for video recording with audio
+  // JPSVolumeButtonHandler defaults to AVAudioSessionCategoryPlayback (playback-only)
+  // which prevents audio recording in videos. We must set it to PlayAndRecord.
+  // This matches the app's AVAudioSession configuration in AppDelegate.swift
+  self.volumeButtonHandler.sessionCategory = AVAudioSessionCategoryPlayAndRecord;
+  self.volumeButtonHandler.sessionOptions = AVAudioSessionCategoryOptionMixWithOthers |
+                                            AVAudioSessionCategoryOptionDefaultToSpeaker;
+
+  NSLog(@"📸 PhysicalButtonController: Configured audio session for recording");
   NSLog(@"📸 PhysicalButtonController: Initialized successfully");
   return self;
 }
