@@ -34,7 +34,7 @@
       type = PigeonSensorTypeUnknown;
     }
     
-    PigeonSensorTypeDevice *sensorType = [PigeonSensorTypeDevice makeWithSensorType:type name:device.localizedName iso:[NSNumber numberWithFloat:device.ISO] flashAvailable:[NSNumber numberWithBool:device.flashAvailable] uid:device.uniqueID];
+    PigeonSensorTypeDevice *sensorType = [PigeonSensorTypeDevice makeWithSensorType:type name:device.localizedName iso:(double)device.ISO flashAvailable:device.flashAvailable uid:device.uniqueID];
     
     if (device.position == position) {
       [sensors addObject:sensorType];

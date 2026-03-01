@@ -1634,7 +1634,7 @@ void SetUpCameraInterfaceWithSuffix(id<FlutterBinaryMessenger> binaryMessenger, 
       NSCAssert([api respondsToSelector:@selector(setFilterMatrix:error:)], @"CameraInterface api (%@) doesn't respond to @selector(setFilterMatrix:error:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
         NSArray<id> *args = message;
-        NSArray<double> *arg_matrix = GetNullableObjectAtIndex(args, 0);
+        NSArray<NSNumber *> *arg_matrix = GetNullableObjectAtIndex(args, 0);
         FlutterError *error;
         [api setFilterMatrix:arg_matrix error:&error];
         callback(wrapResult(nil, error));

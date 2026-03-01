@@ -46,7 +46,7 @@
   NSArray *qualities = [CameraQualities captureFormatsForDevice:device];
   
   for (PreviewSize *quality in qualities) {
-    CGSize qualitySize = CGSizeMake([quality.width floatValue], [quality.height floatValue]);
+    CGSize qualitySize = CGSizeMake(quality.width, quality.height);
     AVCaptureSessionPreset currentPreset = [CameraQualities selectPresetForSize:qualitySize session:session];
     
     if ([session canSetSessionPreset:currentPreset]) {
@@ -92,7 +92,7 @@
   for(int i = 0; i < formats.count; i++) {
     AVCaptureDeviceFormat *format = formats[i];
     [qualities addObject:
-       [PreviewSize makeWithWidth:[NSNumber numberWithDouble:CMVideoFormatDescriptionGetDimensions(format.formatDescription).width] height:[NSNumber numberWithDouble:CMVideoFormatDescriptionGetDimensions(format.formatDescription).height]]
+       [PreviewSize makeWithWidth:(double)CMVideoFormatDescriptionGetDimensions(format.formatDescription).width height:(double)CMVideoFormatDescriptionGetDimensions(format.formatDescription).height]
     ];
   }
   return qualities;

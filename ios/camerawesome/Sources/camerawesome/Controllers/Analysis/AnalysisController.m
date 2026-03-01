@@ -9,7 +9,7 @@
 
 @implementation AnalysisController
 
-+ (void)bgra8888toJpegBgra8888image:(nonnull AnalysisImageWrapper *)bgra8888image jpegQuality:(nonnull NSNumber *)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
++ (void)bgra8888toJpegBgra8888image:(nonnull AnalysisImageWrapper *)bgra8888image jpegQuality:(NSInteger)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
   NSData *bgra8888Data = bgra8888image.bytes.data;
   NSMutableData *mutableData = [bgra8888Data mutableCopy];
   uint8_t *pixels = (uint8_t *)mutableData.mutableBytes;
@@ -25,11 +25,11 @@ for (NSUInteger i = 0; i < mutableData.length; i += 4) {
   CGDataProviderRef dataProvider = CGDataProviderCreateWithCFData(cfData);
   
   CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-  CGImageRef cgImage = CGImageCreate(bgra8888image.width.intValue,
-                                     bgra8888image.height.intValue,
+  CGImageRef cgImage = CGImageCreate((size_t)bgra8888image.width,
+                                     (size_t)bgra8888image.height,
                                      8,
                                      32,
-                                     [bgra8888image.planes.firstObject.bytesPerRow intValue],
+                                     (size_t)bgra8888image.planes.firstObject.bytesPerRow,
                                      colorSpace,
                                      kCGBitmapByteOrder32Big |
                                      kCGImageAlphaPremultipliedLast,
@@ -39,7 +39,7 @@ for (NSUInteger i = 0; i < mutableData.length; i += 4) {
                                      kCGRenderingIntentDefault);
   
   UIImage *image = [UIImage imageWithCGImage:cgImage];
-  NSData *jpegData = UIImageJPEGRepresentation(image, [jpegQuality floatValue]);
+  NSData *jpegData = UIImageJPEGRepresentation(image, (CGFloat)jpegQuality / 100.0);
   
   FlutterStandardTypedData *dataFlutter = [FlutterStandardTypedData typedDataWithBytes:jpegData];
   
@@ -57,11 +57,11 @@ for (NSUInteger i = 0; i < mutableData.length; i += 4) {
   CGImageRelease(cgImage);
   CGDataProviderRelease(dataProvider);
 }
-+ (void)nv21toJpegNv21Image:(nonnull AnalysisImageWrapper *)nv21Image jpegQuality:(nonnull NSNumber *)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
++ (void)nv21toJpegNv21Image:(nonnull AnalysisImageWrapper *)nv21Image jpegQuality:(NSInteger)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
   completion(nil, [FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"this format is currently not supported on iOS" details:nil]);
 }
 
-+ (void)yuv420toJpegYuvImage:(nonnull AnalysisImageWrapper *)yuvImage jpegQuality:(nonnull NSNumber *)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
++ (void)yuv420toJpegYuvImage:(nonnull AnalysisImageWrapper *)yuvImage jpegQuality:(NSInteger)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
   completion(nil, [FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"this format is currently not supported on iOS" details:nil]);
 }
 
