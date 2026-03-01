@@ -320,6 +320,26 @@ abstract class AnalysisImageUtils {
   );
 }
 
+class ExposureCapabilities {
+  final bool isManualExposureSupported;
+  final double minISO;
+  final double maxISO;
+  final double minShutterSpeed;
+  final double maxShutterSpeed;
+  final double currentISO;
+  final double currentShutterSpeed;
+
+  ExposureCapabilities({
+    required this.isManualExposureSupported,
+    required this.minISO,
+    required this.maxISO,
+    required this.minShutterSpeed,
+    required this.maxShutterSpeed,
+    required this.currentISO,
+    required this.currentShutterSpeed,
+  });
+}
+
 @HostApi()
 abstract class CameraInterface {
   @async
@@ -396,6 +416,34 @@ abstract class CameraInterface {
   double getMinZoom();
 
   double getMaxZoom();
+
+  // === MANUAL EXPOSURE ===
+
+  /// Full exposure capabilities in a single round-trip.
+  ExposureCapabilities getExposureCapabilities();
+
+  /// ISO priority mode. Pass -1 to return to auto.
+  @async
+  void setManualISO(double iso);
+
+  /// Shutter priority mode. Duration in seconds. Pass -1 to return to auto.
+  @async
+  void setManualShutterSpeed(double durationInSeconds);
+
+  /// Full manual mode. Pass -1 for either param to keep it auto.
+  @async
+  void setManualExposure(double iso, double durationInSeconds);
+
+  /// Return to fully automatic exposure.
+  @async
+  void setAutoExposure();
+
+  // === SMOOTH ZOOM ===
+
+  /// Native-ramped zoom. [zoom] normalized 0.0-1.0.
+  /// iOS: rate parameter (1.0+, higher = faster). Android: animation duration in ms.
+  @async
+  void setSmoothZoom(double zoom, double rateOrDuration);
 
   void setCaptureMode(String mode);
 

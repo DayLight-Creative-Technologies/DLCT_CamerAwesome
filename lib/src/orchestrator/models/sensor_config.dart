@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:camerawesome/pigeon.dart';
 import 'package:rxdart/rxdart.dart';
 
 // TODO find a way to explain that this sensorconfig is not bound anymore (user changed sensor for example)
@@ -171,6 +172,46 @@ class SensorConfig {
 
   /// Returns the current brightness without stream
   double get brightness => _brightnessController.value;
+
+  // === MANUAL EXPOSURE ===
+
+  /// Query device exposure capabilities (ISO range, shutter speed range, support)
+  Future<ExposureCapabilities> getExposureCapabilities() {
+    return CamerawesomePlugin.getExposureCapabilities();
+  }
+
+  /// Set ISO priority mode. Pass -1 to return to auto.
+  Future<void> setManualISO(double iso) async {
+    await CamerawesomePlugin.setManualISO(iso);
+  }
+
+  /// Set shutter speed priority mode. Duration in seconds. Pass -1 to return to auto.
+  Future<void> setManualShutterSpeed(double durationInSeconds) async {
+    await CamerawesomePlugin.setManualShutterSpeed(durationInSeconds);
+  }
+
+  /// Full manual mode. Pass -1 for either param to keep it auto.
+  Future<void> setManualExposure(double iso, double durationInSeconds) async {
+    await CamerawesomePlugin.setManualExposure(iso, durationInSeconds);
+  }
+
+  /// Return to fully automatic exposure.
+  Future<void> setAutoExposure() async {
+    await CamerawesomePlugin.setAutoExposure();
+  }
+
+  // === SMOOTH ZOOM ===
+
+  /// Native-ramped smooth zoom. [zoom] normalized 0.0-1.0.
+  /// iOS: [rateOrDuration] is the rate (1.0+, higher = faster).
+  /// Android: [rateOrDuration] is animation duration in ms.
+  Future<void> setSmoothZoom(double zoom, {double rateOrDuration = 4.0}) async {
+    final clampedZoom = zoom.clamp(0.0, 1.0);
+    await CamerawesomePlugin.setSmoothZoom(clampedZoom, rateOrDuration);
+    if (!_zoomController.isClosed) {
+      _zoomController.sink.add(clampedZoom);
+    }
+  }
 
   void dispose() {
     _brightnessSubscription?.cancel();

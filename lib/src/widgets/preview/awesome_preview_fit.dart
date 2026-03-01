@@ -1,8 +1,13 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:flutter/material.dart';
+
+extension PreviewSizeExtension on PreviewSize {
+  ui.Size toSize() => ui.Size(width, height);
+}
 
 final previewWidgetKey = GlobalKey();
 

@@ -47,6 +47,11 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
+import android.hardware.camera2.CaptureRequest
+import android.util.Range
+import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.CaptureRequestOptions
 import kotlin.math.roundToInt
 
 
@@ -644,6 +649,155 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
      */
     override fun getMinZoom(): Double {
         return cameraState.minZoomRatio
+    }
+
+    // === MANUAL EXPOSURE ===
+
+    @SuppressLint("UnsafeOptInUsageError", "RestrictedApi")
+    @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
+    override fun getExposureCapabilities(): ExposureCapabilities {
+        val camera = cameraState.concurrentCamera?.cameras?.firstOrNull() ?: cameraState.previewCamera!!
+        val camera2Info = Camera2CameraInfo.from(camera.cameraInfo)
+        val hwLevel = camera2Info.getCameraCharacteristic(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
+        val isSupported = hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL ||
+                hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
+
+        if (!isSupported) {
+            return ExposureCapabilities(
+                isManualExposureSupported = false,
+                minISO = 0.0, maxISO = 0.0,
+                minShutterSpeed = 0.0, maxShutterSpeed = 0.0,
+                currentISO = 0.0, currentShutterSpeed = 0.0
+            )
+        }
+
+        val isoRange: Range<Int>? = camera2Info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        val exposureTimeRange: Range<Long>? = camera2Info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+
+        return ExposureCapabilities(
+            isManualExposureSupported = true,
+            minISO = (isoRange?.lower ?: 100).toDouble(),
+            maxISO = (isoRange?.upper ?: 3200).toDouble(),
+            minShutterSpeed = (exposureTimeRange?.lower ?: 1000000L).toDouble() / 1_000_000_000.0,
+            maxShutterSpeed = (exposureTimeRange?.upper ?: 1_000_000_000L).toDouble() / 1_000_000_000.0,
+            currentISO = (isoRange?.lower ?: 100).toDouble(),
+            currentShutterSpeed = 1.0 / 30.0
+        )
+    }
+
+    @SuppressLint("UnsafeOptInUsageError", "RestrictedApi")
+    @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
+    override fun setManualISO(iso: Double, callback: (Result<Unit>) -> Unit) {
+        try {
+            val camera = cameraState.concurrentCamera?.cameras?.firstOrNull() ?: cameraState.previewCamera!!
+            val camera2Control = Camera2CameraControl.from(camera.cameraControl)
+
+            if (iso < 0) {
+                // Return to auto
+                camera2Control.clearCaptureRequestOptions()
+                callback(Result.success(Unit))
+                return
+            }
+
+            val camera2Info = Camera2CameraInfo.from(camera.cameraInfo)
+            val isoRange: Range<Int> = camera2Info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+                ?: Range(100, 3200)
+            val clampedISO = iso.toInt().coerceIn(isoRange.lower, isoRange.upper)
+
+            val options = CaptureRequestOptions.Builder()
+                .setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                .setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, clampedISO)
+                .build()
+            camera2Control.addCaptureRequestOptions(options)
+            callback(Result.success(Unit))
+        } catch (e: Exception) {
+            callback(Result.failure(e))
+        }
+    }
+
+    @SuppressLint("UnsafeOptInUsageError", "RestrictedApi")
+    @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
+    override fun setManualShutterSpeed(durationInSeconds: Double, callback: (Result<Unit>) -> Unit) {
+        try {
+            val camera = cameraState.concurrentCamera?.cameras?.firstOrNull() ?: cameraState.previewCamera!!
+            val camera2Control = Camera2CameraControl.from(camera.cameraControl)
+
+            if (durationInSeconds < 0) {
+                camera2Control.clearCaptureRequestOptions()
+                callback(Result.success(Unit))
+                return
+            }
+
+            val camera2Info = Camera2CameraInfo.from(camera.cameraInfo)
+            val exposureTimeRange: Range<Long> = camera2Info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+                ?: Range(1000000L, 1_000_000_000L)
+            val targetNanos = (durationInSeconds * 1_000_000_000.0).toLong()
+            val clampedNanos = targetNanos.coerceIn(exposureTimeRange.lower, exposureTimeRange.upper)
+
+            val options = CaptureRequestOptions.Builder()
+                .setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                .setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedNanos)
+                .build()
+            camera2Control.addCaptureRequestOptions(options)
+            callback(Result.success(Unit))
+        } catch (e: Exception) {
+            callback(Result.failure(e))
+        }
+    }
+
+    @SuppressLint("UnsafeOptInUsageError", "RestrictedApi")
+    @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
+    override fun setManualExposure(iso: Double, durationInSeconds: Double, callback: (Result<Unit>) -> Unit) {
+        try {
+            val camera = cameraState.concurrentCamera?.cameras?.firstOrNull() ?: cameraState.previewCamera!!
+            val camera2Control = Camera2CameraControl.from(camera.cameraControl)
+            val camera2Info = Camera2CameraInfo.from(camera.cameraInfo)
+
+            val builder = CaptureRequestOptions.Builder()
+                .setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+
+            if (iso >= 0) {
+                val isoRange: Range<Int> = camera2Info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+                    ?: Range(100, 3200)
+                builder.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, iso.toInt().coerceIn(isoRange.lower, isoRange.upper))
+            }
+
+            if (durationInSeconds >= 0) {
+                val exposureTimeRange: Range<Long> = camera2Info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+                    ?: Range(1000000L, 1_000_000_000L)
+                val targetNanos = (durationInSeconds * 1_000_000_000.0).toLong()
+                builder.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, targetNanos.coerceIn(exposureTimeRange.lower, exposureTimeRange.upper))
+            }
+
+            camera2Control.addCaptureRequestOptions(builder.build())
+            callback(Result.success(Unit))
+        } catch (e: Exception) {
+            callback(Result.failure(e))
+        }
+    }
+
+    @SuppressLint("UnsafeOptInUsageError", "RestrictedApi")
+    @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
+    override fun setAutoExposure(callback: (Result<Unit>) -> Unit) {
+        try {
+            val camera = cameraState.concurrentCamera?.cameras?.firstOrNull() ?: cameraState.previewCamera!!
+            val camera2Control = Camera2CameraControl.from(camera.cameraControl)
+            camera2Control.clearCaptureRequestOptions()
+            callback(Result.success(Unit))
+        } catch (e: Exception) {
+            callback(Result.failure(e))
+        }
+    }
+
+    // === SMOOTH ZOOM ===
+
+    override fun setSmoothZoom(zoom: Double, rateOrDuration: Double, callback: (Result<Unit>) -> Unit) {
+        try {
+            cameraState.setSmoothZoom(zoom.toFloat(), rateOrDuration.toLong().coerceAtLeast(50))
+            callback(Result.success(Unit))
+        } catch (e: Exception) {
+            callback(Result.failure(e))
+        }
     }
 
     fun convertLinearToRatio(linear: Double): Double {

@@ -391,6 +391,42 @@ class CamerawesomePlugin {
     return CameraInterface().getMinZoom();
   }
 
+  // === MANUAL EXPOSURE ===
+
+  /// Query device exposure capabilities
+  static Future<ExposureCapabilities> getExposureCapabilities() {
+    return CameraInterface().getExposureCapabilities();
+  }
+
+  /// Set ISO priority mode. Pass -1 to return to auto.
+  static Future<void> setManualISO(double iso) {
+    return CameraInterface().setManualISO(iso);
+  }
+
+  /// Set shutter speed priority mode. Duration in seconds. Pass -1 to return to auto.
+  static Future<void> setManualShutterSpeed(double durationInSeconds) {
+    return CameraInterface().setManualShutterSpeed(durationInSeconds);
+  }
+
+  /// Full manual mode. Pass -1 for either param to keep it auto.
+  static Future<void> setManualExposure(double iso, double durationInSeconds) {
+    return CameraInterface().setManualExposure(iso, durationInSeconds);
+  }
+
+  /// Return to fully automatic exposure.
+  static Future<void> setAutoExposure() {
+    return CameraInterface().setAutoExposure();
+  }
+
+  // === SMOOTH ZOOM ===
+
+  /// Native-ramped smooth zoom. [zoom] normalized 0.0-1.0.
+  /// iOS: [rateOrDuration] is the rate (1.0+, higher = faster).
+  /// Android: [rateOrDuration] is animation duration in ms.
+  static Future<void> setSmoothZoom(double zoom, double rateOrDuration) {
+    return CameraInterface().setSmoothZoom(zoom, rateOrDuration);
+  }
+
   static Future<bool> isMultiCamSupported() {
     return CameraInterface().isMultiCamSupported();
   }

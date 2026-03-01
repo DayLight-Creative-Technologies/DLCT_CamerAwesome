@@ -1,3 +1,14 @@
+# 2.6.0
+
+- Manual exposure control: ISO priority, shutter priority, and full manual modes
+- `getExposureCapabilities()` for querying device ISO/shutter ranges at runtime
+- `setSmoothZoom()` with native hardware ramping (iOS) and ValueAnimator interpolation (Android)
+- `setManualISO()`, `setManualShutterSpeed()`, `setManualExposure()`, `setAutoExposure()`
+- Android: Camera2Interop for MANUAL_SENSOR control (requires FULL+ hardware level)
+- iOS: `AVCaptureDevice.setExposureModeCustom` and `rampToVideoZoomFactor`
+- Graceful degradation on unsupported devices
+- Fix `PreviewSize.toSize()` compatibility with Pigeon v21
+
 # 2.5.5
 
 - 🐛 Keep portrait lock in place (no changes to orientation behavior)

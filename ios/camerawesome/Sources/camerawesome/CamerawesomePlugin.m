@@ -634,6 +634,86 @@ FlutterEventSink physicalButtonEventSink;
   }
 }
 
+#pragma mark - Manual exposure methods
+
+- (nullable ExposureCapabilities *)getExposureCapabilitiesWithError:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
+  if (self.camera == nil && self.multiCamera == nil) {
+    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
+    return nil;
+  }
+
+  if (self.multiCamera != nil) {
+    return [self.multiCamera getExposureCapabilities];
+  } else {
+    return [self.camera getExposureCapabilities];
+  }
+}
+
+- (void)setManualISOIso:(double)iso completion:(void (^)(FlutterError * _Nullable))completion {
+  if (self.camera == nil && self.multiCamera == nil) {
+    completion([FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil]);
+    return;
+  }
+
+  if (self.multiCamera != nil) {
+    [self.multiCamera setManualISO:iso completion:completion];
+  } else {
+    [self.camera setManualISO:iso completion:completion];
+  }
+}
+
+- (void)setManualShutterSpeedDurationInSeconds:(double)durationInSeconds completion:(void (^)(FlutterError * _Nullable))completion {
+  if (self.camera == nil && self.multiCamera == nil) {
+    completion([FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil]);
+    return;
+  }
+
+  if (self.multiCamera != nil) {
+    [self.multiCamera setManualShutterSpeed:durationInSeconds completion:completion];
+  } else {
+    [self.camera setManualShutterSpeed:durationInSeconds completion:completion];
+  }
+}
+
+- (void)setManualExposureIso:(double)iso durationInSeconds:(double)durationInSeconds completion:(void (^)(FlutterError * _Nullable))completion {
+  if (self.camera == nil && self.multiCamera == nil) {
+    completion([FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil]);
+    return;
+  }
+
+  if (self.multiCamera != nil) {
+    [self.multiCamera setManualExposure:iso durationInSeconds:durationInSeconds completion:completion];
+  } else {
+    [self.camera setManualExposure:iso durationInSeconds:durationInSeconds completion:completion];
+  }
+}
+
+- (void)setAutoExposureWithCompletion:(void (^)(FlutterError * _Nullable))completion {
+  if (self.camera == nil && self.multiCamera == nil) {
+    completion([FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil]);
+    return;
+  }
+
+  if (self.multiCamera != nil) {
+    [self.multiCamera setAutoExposure:completion];
+  } else {
+    [self.camera setAutoExposure:completion];
+  }
+}
+
+- (void)setSmoothZoomZoom:(double)zoom rateOrDuration:(double)rateOrDuration completion:(void (^)(FlutterError * _Nullable))completion {
+  if (self.camera == nil && self.multiCamera == nil) {
+    completion([FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil]);
+    return;
+  }
+
+  if (self.multiCamera != nil) {
+    [self.multiCamera setSmoothZoom:(float)zoom rate:(float)rateOrDuration completion:completion];
+  } else {
+    [self.camera setSmoothZoom:(float)zoom rate:(float)rateOrDuration completion:completion];
+  }
+}
+
 #pragma mark - Image stream methods
 
 - (void)receivedImageFromStreamWithError:(FlutterError *_Nullable *_Nonnull)error {

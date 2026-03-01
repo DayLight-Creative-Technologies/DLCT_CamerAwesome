@@ -24,6 +24,8 @@ import com.apparence.camerawesome.sensors.SensorOrientation
 import com.apparence.camerawesome.utils.isMultiCamSupported
 import io.flutter.plugin.common.EventChannel
 import io.flutter.view.TextureRegistry
+import android.animation.ValueAnimator
+import android.view.animation.DecelerateInterpolator
 import java.util.concurrent.Executor
 
 /// Hold the settings of the camera and use cases in this class and
@@ -337,8 +339,22 @@ data class CameraXState(
         }
     }
 
+    private var zoomAnimator: ValueAnimator? = null
+
     fun setLinearZoom(zoom: Float) {
         mainCameraControl.setLinearZoom(zoom)
+    }
+
+    fun setSmoothZoom(targetZoom: Float, durationMs: Long) {
+        zoomAnimator?.cancel()
+        val currentZoom = mainCameraInfos.zoomState.value?.linearZoom ?: 0f
+        val clampedTarget = targetZoom.coerceIn(0f, 1f)
+        zoomAnimator = ValueAnimator.ofFloat(currentZoom, clampedTarget).apply {
+            duration = durationMs
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { mainCameraControl.setLinearZoom(it.animatedValue as Float) }
+            start()
+        }
     }
 
     fun startFocusAndMetering(autoFocusAction: FocusMeteringAction) {

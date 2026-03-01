@@ -215,6 +215,154 @@
   }
 }
 
+// === MANUAL EXPOSURE ===
+
+- (ExposureCapabilities *)getExposureCapabilities {
+  AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  BOOL isSupported = [mainDevice isExposureModeSupported:AVCaptureExposureModeCustom];
+
+  double minISO = isSupported ? (double)mainDevice.activeFormat.minISO : 0;
+  double maxISO = isSupported ? (double)mainDevice.activeFormat.maxISO : 0;
+
+  CMTime minDuration = mainDevice.activeFormat.minExposureDuration;
+  CMTime maxDuration = mainDevice.activeFormat.maxExposureDuration;
+  double minShutter = isSupported ? CMTimeGetSeconds(minDuration) : 0;
+  double maxShutter = isSupported ? CMTimeGetSeconds(maxDuration) : 0;
+
+  double currentISO = (double)mainDevice.ISO;
+  double currentShutter = CMTimeGetSeconds(mainDevice.exposureDuration);
+
+  return [ExposureCapabilities makeWithIsManualExposureSupported:isSupported
+                                                         minISO:minISO
+                                                         maxISO:maxISO
+                                                minShutterSpeed:minShutter
+                                                maxShutterSpeed:maxShutter
+                                                     currentISO:currentISO
+                                            currentShutterSpeed:currentShutter];
+}
+
+- (void)setManualISO:(double)iso completion:(void (^)(FlutterError * _Nullable))completion {
+  AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  if (![mainDevice isExposureModeSupported:AVCaptureExposureModeCustom]) {
+    completion([FlutterError errorWithCode:@"MANUAL_EXPOSURE_UNSUPPORTED" message:@"manual exposure is not supported on this device" details:nil]);
+    return;
+  }
+
+  NSError *lockError;
+  if ([mainDevice lockForConfiguration:&lockError]) {
+    if (iso < 0) {
+      [mainDevice setExposureMode:AVCaptureExposureModeContinuousAutoExposure];
+    } else {
+      float clampedISO = MAX(mainDevice.activeFormat.minISO, MIN(mainDevice.activeFormat.maxISO, (float)iso));
+      [mainDevice setExposureModeCustomWithDuration:AVCaptureExposureDurationCurrent ISO:clampedISO completionHandler:^(CMTime syncTime) {
+        completion(nil);
+      }];
+      [mainDevice unlockForConfiguration];
+      return;
+    }
+    [mainDevice unlockForConfiguration];
+    completion(nil);
+  } else {
+    completion([FlutterError errorWithCode:@"EXPOSURE_LOCK_FAILED" message:@"can't lock device for configuration" details:[lockError localizedDescription]]);
+  }
+}
+
+- (void)setManualShutterSpeed:(double)durationInSeconds completion:(void (^)(FlutterError * _Nullable))completion {
+  AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  if (![mainDevice isExposureModeSupported:AVCaptureExposureModeCustom]) {
+    completion([FlutterError errorWithCode:@"MANUAL_EXPOSURE_UNSUPPORTED" message:@"manual exposure is not supported on this device" details:nil]);
+    return;
+  }
+
+  NSError *lockError;
+  if ([mainDevice lockForConfiguration:&lockError]) {
+    if (durationInSeconds < 0) {
+      [mainDevice setExposureMode:AVCaptureExposureModeContinuousAutoExposure];
+    } else {
+      CMTime minDuration = mainDevice.activeFormat.minExposureDuration;
+      CMTime maxDuration = mainDevice.activeFormat.maxExposureDuration;
+      CMTime targetDuration = CMTimeMakeWithSeconds(durationInSeconds, 1000000000);
+      CMTime clampedDuration = CMTimeMaximum(minDuration, CMTimeMinimum(maxDuration, targetDuration));
+      [mainDevice setExposureModeCustomWithDuration:clampedDuration ISO:AVCaptureISOCurrent completionHandler:^(CMTime syncTime) {
+        completion(nil);
+      }];
+      [mainDevice unlockForConfiguration];
+      return;
+    }
+    [mainDevice unlockForConfiguration];
+    completion(nil);
+  } else {
+    completion([FlutterError errorWithCode:@"EXPOSURE_LOCK_FAILED" message:@"can't lock device for configuration" details:[lockError localizedDescription]]);
+  }
+}
+
+- (void)setManualExposure:(double)iso durationInSeconds:(double)durationInSeconds completion:(void (^)(FlutterError * _Nullable))completion {
+  AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  if (![mainDevice isExposureModeSupported:AVCaptureExposureModeCustom]) {
+    completion([FlutterError errorWithCode:@"MANUAL_EXPOSURE_UNSUPPORTED" message:@"manual exposure is not supported on this device" details:nil]);
+    return;
+  }
+
+  NSError *lockError;
+  if ([mainDevice lockForConfiguration:&lockError]) {
+    float resolvedISO;
+    if (iso < 0) {
+      resolvedISO = AVCaptureISOCurrent;
+    } else {
+      resolvedISO = MAX(mainDevice.activeFormat.minISO, MIN(mainDevice.activeFormat.maxISO, (float)iso));
+    }
+
+    CMTime resolvedDuration;
+    if (durationInSeconds < 0) {
+      resolvedDuration = AVCaptureExposureDurationCurrent;
+    } else {
+      CMTime minDuration = mainDevice.activeFormat.minExposureDuration;
+      CMTime maxDuration = mainDevice.activeFormat.maxExposureDuration;
+      CMTime targetDuration = CMTimeMakeWithSeconds(durationInSeconds, 1000000000);
+      resolvedDuration = CMTimeMaximum(minDuration, CMTimeMinimum(maxDuration, targetDuration));
+    }
+
+    [mainDevice setExposureModeCustomWithDuration:resolvedDuration ISO:resolvedISO completionHandler:^(CMTime syncTime) {
+      completion(nil);
+    }];
+    [mainDevice unlockForConfiguration];
+  } else {
+    completion([FlutterError errorWithCode:@"EXPOSURE_LOCK_FAILED" message:@"can't lock device for configuration" details:[lockError localizedDescription]]);
+  }
+}
+
+- (void)setAutoExposure:(void (^)(FlutterError * _Nullable))completion {
+  AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  NSError *lockError;
+  if ([mainDevice lockForConfiguration:&lockError]) {
+    if ([mainDevice isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure]) {
+      [mainDevice setExposureMode:AVCaptureExposureModeContinuousAutoExposure];
+    }
+    [mainDevice unlockForConfiguration];
+    completion(nil);
+  } else {
+    completion([FlutterError errorWithCode:@"EXPOSURE_LOCK_FAILED" message:@"can't lock device for configuration" details:[lockError localizedDescription]]);
+  }
+}
+
+// === SMOOTH ZOOM ===
+
+- (void)setSmoothZoom:(float)zoom rate:(float)rate completion:(void (^)(FlutterError * _Nullable))completion {
+  AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  CGFloat maxZoom = [self getMaxZoom];
+  CGFloat scaledZoom = zoom * (maxZoom - 1.0f) + 1.0f;
+  scaledZoom = MAX(1.0f, MIN(maxZoom, scaledZoom));
+
+  NSError *lockError;
+  if ([mainDevice lockForConfiguration:&lockError]) {
+    [mainDevice rampToVideoZoomFactor:scaledZoom withRate:rate];
+    [mainDevice unlockForConfiguration];
+    completion(nil);
+  } else {
+    completion([FlutterError errorWithCode:@"SMOOTH_ZOOM_NOT_SET" message:@"can't set smooth zoom" details:[lockError localizedDescription]]);
+  }
+}
+
 /// Set flash mode
 - (void)setFlashMode:(CameraFlashMode)flashMode error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
   AVCaptureDevice *mainDevice = self.devices.firstObject.device;
