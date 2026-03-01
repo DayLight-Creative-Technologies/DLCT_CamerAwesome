@@ -67,6 +67,12 @@ AVCaptureAudioDataOutputSampleBufferDelegate>
 - (void)setExifPreferencesGPSLocation:(bool)gpsLocation completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 - (void)setOrientationEventSink:(FlutterEventSink)orientationEventSink;
 - (void)setPhysicalButtonEventSink:(FlutterEventSink)physicalButtonEventSink;
+- (ExposureCapabilities *)getExposureCapabilities;
+- (void)setManualISO:(double)iso completion:(void (^)(FlutterError * _Nullable))completion;
+- (void)setManualShutterSpeed:(double)durationInSeconds completion:(void (^)(FlutterError * _Nullable))completion;
+- (void)setManualExposure:(double)iso durationInSeconds:(double)durationInSeconds completion:(void (^)(FlutterError * _Nullable))completion;
+- (void)setAutoExposure:(void (^)(FlutterError * _Nullable))completion;
+- (void)setSmoothZoom:(float)zoom rate:(float)rate completion:(void (^)(FlutterError * _Nullable))completion;
 
 @end
 

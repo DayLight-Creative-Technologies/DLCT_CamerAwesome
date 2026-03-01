@@ -104,6 +104,12 @@ AVCaptureAudioDataOutputSampleBufferDelegate>
 - (CGSize)getEffectivPreviewSize;
 - (void)setUpCaptureSessionForAudioError:(nonnull void (^)(NSError *))error;
 - (void)setBrightness:(NSNumber *)brightness error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error;
+- (ExposureCapabilities *)getExposureCapabilities;
+- (void)setManualISO:(double)iso completion:(void (^)(FlutterError * _Nullable))completion;
+- (void)setManualShutterSpeed:(double)durationInSeconds completion:(void (^)(FlutterError * _Nullable))completion;
+- (void)setManualExposure:(double)iso durationInSeconds:(double)durationInSeconds completion:(void (^)(FlutterError * _Nullable))completion;
+- (void)setAutoExposure:(void (^)(FlutterError * _Nullable))completion;
+- (void)setSmoothZoom:(float)zoom rate:(float)rate completion:(void (^)(FlutterError * _Nullable))completion;
 @end
 
 NS_ASSUME_NONNULL_END

@@ -59,8 +59,8 @@ FlutterEventSink physicalButtonEventSink;
   [imageStreamChannel setStreamHandler:instance];
   [physicalButtonChannel setStreamHandler:instance];
   
-  CameraInterfaceSetup(registrar.messenger, instance);
-  AnalysisImageUtilsSetup(registrar.messenger, instance);
+  SetUpCameraInterface(registrar.messenger, instance);
+  SetUpAnalysisImageUtils(registrar.messenger, instance);
 }
 
 #pragma mark - Camera engine methods
@@ -124,7 +124,7 @@ FlutterEventSink physicalButtonEventSink;
     PigeonSensor *firstSensor = sensors.firstObject;
     self.camera = [[SingleCameraPreview alloc] initWithCameraSensor:firstSensor.position
                                                        videoOptions:videoOptions != nil ? videoOptions.ios : nil
-                                                   recordingQuality:videoOptions != nil ? videoOptions.quality : VideoRecordingQualityHighest
+                                                   recordingQuality:(videoOptions != nil && videoOptions.quality != nil) ? videoOptions.quality.value : VideoRecordingQualityHighest
                                                        streamImages:enableImageStream
                                                   mirrorFrontCamera:mirrorFrontCamera
                                                enablePhysicalButton:enablePhysicalButton
