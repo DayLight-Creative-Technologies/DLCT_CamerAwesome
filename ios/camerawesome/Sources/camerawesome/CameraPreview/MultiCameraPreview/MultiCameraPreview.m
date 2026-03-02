@@ -6,14 +6,7 @@
 //
 
 #import "MultiCameraPreview.h"
-
-// Forward-declare audio session lifecycle methods from SingleCameraPreview
-// (can't import SingleCameraPreview.h directly due to circular header dependency)
-@class SingleCameraPreview;
-@interface SingleCameraPreview (AudioSession)
-+ (void)activateRecordingAudioSession;
-+ (void)restorePlaybackAudioSession;
-@end
+#import "SingleCameraPreview.h"
 
 @implementation MultiCameraPreview
 
