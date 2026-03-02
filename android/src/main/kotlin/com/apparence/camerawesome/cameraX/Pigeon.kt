@@ -495,6 +495,33 @@ data class AnalysisImageWrapper (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
+data class VideoConfigurationOption (
+  val label: String,
+  val width: Long,
+  val height: Long,
+  val supportedFps: List<Long?>
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): VideoConfigurationOption {
+      val label = pigeonVar_list[0] as String
+      val width = pigeonVar_list[1].let { num -> if (num is Int) num.toLong() else num as Long }
+      val height = pigeonVar_list[2].let { num -> if (num is Int) num.toLong() else num as Long }
+      val supportedFps = pigeonVar_list[3] as List<Long?>
+      return VideoConfigurationOption(label, width, height, supportedFps)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      label,
+      width,
+      height,
+      supportedFps,
+    )
+  }
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
 data class ExposureCapabilities (
   val isManualExposureSupported: Boolean,
   val minISO: Double,
@@ -634,6 +661,11 @@ private object PigeonPigeonCodec : StandardMessageCodec() {
       }
       149.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
+          VideoConfigurationOption.fromList(it)
+        }
+      }
+      150.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
           ExposureCapabilities.fromList(it)
         }
       }
@@ -722,8 +754,12 @@ private object PigeonPigeonCodec : StandardMessageCodec() {
         stream.write(148)
         writeValue(stream, value.toList())
       }
-      is ExposureCapabilities -> {
+      is VideoConfigurationOption -> {
         stream.write(149)
+        writeValue(stream, value.toList())
+      }
+      is ExposureCapabilities -> {
+        stream.write(150)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -905,6 +941,10 @@ interface CameraInterface {
   fun setFilter(matrix: List<Double>)
   fun isVideoRecordingAndImageAnalysisSupported(sensor: PigeonSensorPosition, callback: (Result<Boolean>) -> Unit)
   fun isMultiCamSupported(): Boolean
+  /** Query supported video resolution/fps combinations from the device. */
+  fun getSupportedVideoConfigurations(): List<VideoConfigurationOption>
+  /** Apply a specific video resolution and frame rate. */
+  fun setVideoConfiguration(width: Long, height: Long, fps: Long)
 
   companion object {
     /** The codec used by CameraInterface. */
@@ -1704,6 +1744,41 @@ interface CameraInterface {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               listOf(api.isMultiCamSupported())
+            } catch (exception: Throwable) {
+              wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.camerawesome.CameraInterface.getSupportedVideoConfigurations$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.getSupportedVideoConfigurations())
+            } catch (exception: Throwable) {
+              wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.camerawesome.CameraInterface.setVideoConfiguration$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val widthArg = args[0].let { num -> if (num is Int) num.toLong() else num as Long }
+            val heightArg = args[1].let { num -> if (num is Int) num.toLong() else num as Long }
+            val fpsArg = args[2].let { num -> if (num is Int) num.toLong() else num as Long }
+            val wrapped: List<Any?> = try {
+              api.setVideoConfiguration(widthArg, heightArg, fpsArg)
+              listOf(null)
             } catch (exception: Throwable) {
               wrapError(exception)
             }

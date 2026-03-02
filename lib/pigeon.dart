@@ -481,6 +481,42 @@ class AnalysisImageWrapper {
   }
 }
 
+class VideoConfigurationOption {
+  VideoConfigurationOption({
+    required this.label,
+    required this.width,
+    required this.height,
+    required this.supportedFps,
+  });
+
+  String label;
+
+  int width;
+
+  int height;
+
+  List<int?> supportedFps;
+
+  Object encode() {
+    return <Object?>[
+      label,
+      width,
+      height,
+      supportedFps,
+    ];
+  }
+
+  static VideoConfigurationOption decode(Object result) {
+    result as List<Object?>;
+    return VideoConfigurationOption(
+      label: result[0]! as String,
+      width: result[1]! as int,
+      height: result[2]! as int,
+      supportedFps: (result[3] as List<Object?>?)!.cast<int?>(),
+    );
+  }
+}
+
 class ExposureCapabilities {
   ExposureCapabilities({
     required this.isManualExposureSupported,
@@ -597,8 +633,11 @@ class _PigeonCodec extends StandardMessageCodec {
     } else     if (value is AnalysisImageWrapper) {
       buffer.putUint8(148);
       writeValue(buffer, value.encode());
-    } else     if (value is ExposureCapabilities) {
+    } else     if (value is VideoConfigurationOption) {
       buffer.putUint8(149);
+      writeValue(buffer, value.encode());
+    } else     if (value is ExposureCapabilities) {
+      buffer.putUint8(150);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -658,6 +697,8 @@ class _PigeonCodec extends StandardMessageCodec {
       case 148: 
         return AnalysisImageWrapper.decode(readValue(buffer)!);
       case 149: 
+        return VideoConfigurationOption.decode(readValue(buffer)!);
+      case 150: 
         return ExposureCapabilities.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -1898,6 +1939,57 @@ class CameraInterface {
       );
     } else {
       return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
+
+  /// Query supported video resolution/fps combinations from the device.
+  Future<List<VideoConfigurationOption?>> getSupportedVideoConfigurations() async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.camerawesome.CameraInterface.getSupportedVideoConfigurations$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(null) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as List<Object?>?)!.cast<VideoConfigurationOption?>();
+    }
+  }
+
+  /// Apply a specific video resolution and frame rate.
+  Future<void> setVideoConfiguration(int width, int height, int fps) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.camerawesome.CameraInterface.setVideoConfiguration$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(<Object?>[width, height, fps]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
     }
   }
 }

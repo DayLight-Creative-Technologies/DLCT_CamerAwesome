@@ -842,6 +842,34 @@ FlutterEventSink physicalButtonEventSink;
   return [NSNumber numberWithBool: [MultiCameraController isMultiCamSupported]];
 }
 
+#pragma mark - Video configuration methods
+
+- (nullable NSArray<VideoConfigurationOption *> *)getSupportedVideoConfigurationsWithError:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
+  if (self.camera == nil && self.multiCamera == nil) {
+    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
+    return nil;
+  }
+
+  if (self.multiCamera != nil) {
+    return [self.multiCamera getSupportedVideoConfigurations];
+  } else {
+    return [self.camera getSupportedVideoConfigurations];
+  }
+}
+
+- (void)setVideoConfigurationWidth:(NSInteger)width height:(NSInteger)height fps:(NSInteger)fps error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
+  if (self.camera == nil && self.multiCamera == nil) {
+    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
+    return;
+  }
+
+  if (self.multiCamera != nil) {
+    [self.multiCamera setVideoConfiguration:width height:height fps:fps error:error];
+  } else {
+    [self.camera setVideoConfiguration:width height:height fps:fps error:error];
+  }
+}
+
 - (void)bgra8888toJpegBgra8888image:(nonnull AnalysisImageWrapper *)bgra8888image jpegQuality:(NSInteger)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
   dispatch_async(_dispatchQueueAnalysis, ^{
     [AnalysisController bgra8888toJpegBgra8888image:bgra8888image jpegQuality:jpegQuality completion:completion];

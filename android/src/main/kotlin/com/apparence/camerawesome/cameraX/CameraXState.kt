@@ -324,6 +324,26 @@ data class CameraXState(
     }
 
     @SuppressLint("RestrictedApi")
+    fun rebuildVideoCapture(quality: Quality, fps: Long) {
+        // Build a new VideoCapture with the specified quality
+        val recorderBuilder = Recorder.Builder()
+        recorderBuilder.setQualitySelector(
+            QualitySelector.from(quality, FallbackStrategy.lowerQualityOrHigherThan(quality))
+        )
+        if (videoOptions?.bitrate != null) {
+            recorderBuilder.setTargetVideoEncodingBitRate(videoOptions.bitrate.toInt())
+        }
+        val recorder = recorderBuilder.build()
+        val newVideoCapture = VideoCapture.Builder<Recorder>(recorder)
+            .setMirrorMode(if (mirrorFrontCamera) MirrorMode.MIRROR_MODE_ON_FRONT_ONLY else MirrorMode.MIRROR_MODE_OFF)
+            .build()
+
+        // Replace the existing video capture for the first sensor
+        val sensor = sensors.firstOrNull() ?: return
+        videoCaptures[sensor] = newVideoCapture
+    }
+
+    @SuppressLint("RestrictedApi")
     private fun surfaceProvider(executor: Executor, cameraId: String): Preview.SurfaceProvider {
 //        Log.d("SurfaceProviderCamX", "Creating surface provider for $cameraId")
         return Preview.SurfaceProvider { request: SurfaceRequest ->

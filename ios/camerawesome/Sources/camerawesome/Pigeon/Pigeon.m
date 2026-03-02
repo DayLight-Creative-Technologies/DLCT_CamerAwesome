@@ -192,6 +192,12 @@ static id GetNullableObjectAtIndex(NSArray<id> *array, NSInteger key) {
 - (NSArray<id> *)toList;
 @end
 
+@interface VideoConfigurationOption ()
++ (VideoConfigurationOption *)fromList:(NSArray<id> *)list;
++ (nullable VideoConfigurationOption *)nullableFromList:(NSArray<id> *)list;
+- (NSArray<id> *)toList;
+@end
+
 @interface ExposureCapabilities ()
 + (ExposureCapabilities *)fromList:(NSArray<id> *)list;
 + (nullable ExposureCapabilities *)nullableFromList:(NSArray<id> *)list;
@@ -537,6 +543,39 @@ static id GetNullableObjectAtIndex(NSArray<id> *array, NSInteger key) {
 }
 @end
 
+@implementation VideoConfigurationOption
++ (instancetype)makeWithLabel:(NSString *)label
+    width:(NSInteger )width
+    height:(NSInteger )height
+    supportedFps:(NSArray<NSNumber *> *)supportedFps {
+  VideoConfigurationOption* pigeonResult = [[VideoConfigurationOption alloc] init];
+  pigeonResult.label = label;
+  pigeonResult.width = width;
+  pigeonResult.height = height;
+  pigeonResult.supportedFps = supportedFps;
+  return pigeonResult;
+}
++ (VideoConfigurationOption *)fromList:(NSArray<id> *)list {
+  VideoConfigurationOption *pigeonResult = [[VideoConfigurationOption alloc] init];
+  pigeonResult.label = GetNullableObjectAtIndex(list, 0);
+  pigeonResult.width = [GetNullableObjectAtIndex(list, 1) integerValue];
+  pigeonResult.height = [GetNullableObjectAtIndex(list, 2) integerValue];
+  pigeonResult.supportedFps = GetNullableObjectAtIndex(list, 3);
+  return pigeonResult;
+}
++ (nullable VideoConfigurationOption *)nullableFromList:(NSArray<id> *)list {
+  return (list) ? [VideoConfigurationOption fromList:list] : nil;
+}
+- (NSArray<id> *)toList {
+  return @[
+    self.label ?: [NSNull null],
+    @(self.width),
+    @(self.height),
+    self.supportedFps ?: [NSNull null],
+  ];
+}
+@end
+
 @implementation ExposureCapabilities
 + (instancetype)makeWithIsManualExposureSupported:(BOOL )isManualExposureSupported
     minISO:(double )minISO
@@ -646,6 +685,8 @@ static id GetNullableObjectAtIndex(NSArray<id> *array, NSInteger key) {
     case 148: 
       return [AnalysisImageWrapper fromList:[self readValue]];
     case 149: 
+      return [VideoConfigurationOption fromList:[self readValue]];
+    case 150: 
       return [ExposureCapabilities fromList:[self readValue]];
     default:
       return [super readValueOfType:type];
@@ -726,8 +767,11 @@ static id GetNullableObjectAtIndex(NSArray<id> *array, NSInteger key) {
   } else if ([value isKindOfClass:[AnalysisImageWrapper class]]) {
     [self writeByte:148];
     [self writeValue:[value toList]];
-  } else if ([value isKindOfClass:[ExposureCapabilities class]]) {
+  } else if ([value isKindOfClass:[VideoConfigurationOption class]]) {
     [self writeByte:149];
+    [self writeValue:[value toList]];
+  } else if ([value isKindOfClass:[ExposureCapabilities class]]) {
+    [self writeByte:150];
     [self writeValue:[value toList]];
   } else {
     [super writeValue:value];
@@ -1695,6 +1739,46 @@ void SetUpCameraInterfaceWithSuffix(id<FlutterBinaryMessenger> binaryMessenger, 
         FlutterError *error;
         NSNumber *output = [api isMultiCamSupportedWithError:&error];
         callback(wrapResult(output, error));
+      }];
+    } else {
+      [channel setMessageHandler:nil];
+    }
+  }
+  /// Query supported video resolution/fps combinations from the device.
+  {
+    FlutterBasicMessageChannel *channel =
+      [[FlutterBasicMessageChannel alloc]
+        initWithName:[NSString stringWithFormat:@"%@%@", @"dev.flutter.pigeon.camerawesome.CameraInterface.getSupportedVideoConfigurations", messageChannelSuffix]
+        binaryMessenger:binaryMessenger
+        codec:nullGetPigeonCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(getSupportedVideoConfigurationsWithError:)], @"CameraInterface api (%@) doesn't respond to @selector(getSupportedVideoConfigurationsWithError:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        FlutterError *error;
+        NSArray<VideoConfigurationOption *> *output = [api getSupportedVideoConfigurationsWithError:&error];
+        callback(wrapResult(output, error));
+      }];
+    } else {
+      [channel setMessageHandler:nil];
+    }
+  }
+  /// Apply a specific video resolution and frame rate.
+  {
+    FlutterBasicMessageChannel *channel =
+      [[FlutterBasicMessageChannel alloc]
+        initWithName:[NSString stringWithFormat:@"%@%@", @"dev.flutter.pigeon.camerawesome.CameraInterface.setVideoConfiguration", messageChannelSuffix]
+        binaryMessenger:binaryMessenger
+        codec:nullGetPigeonCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(setVideoConfigurationWidth:height:fps:error:)], @"CameraInterface api (%@) doesn't respond to @selector(setVideoConfigurationWidth:height:fps:error:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        NSArray<id> *args = message;
+        NSInteger arg_width = [GetNullableObjectAtIndex(args, 0) integerValue];
+        NSInteger arg_height = [GetNullableObjectAtIndex(args, 1) integerValue];
+        NSInteger arg_fps = [GetNullableObjectAtIndex(args, 2) integerValue];
+        FlutterError *error;
+        [api setVideoConfigurationWidth:arg_width height:arg_height fps:arg_fps error:&error];
+        callback(wrapResult(nil, error));
       }];
     } else {
       [channel setMessageHandler:nil];

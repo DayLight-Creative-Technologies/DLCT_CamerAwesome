@@ -320,6 +320,20 @@ abstract class AnalysisImageUtils {
   );
 }
 
+class VideoConfigurationOption {
+  final String label;          // "720p", "1080p", "4K"
+  final int width;
+  final int height;
+  final List<int?> supportedFps; // [24, 30, 60] — nullable for Pigeon safety
+
+  VideoConfigurationOption({
+    required this.label,
+    required this.width,
+    required this.height,
+    required this.supportedFps,
+  });
+}
+
 class ExposureCapabilities {
   final bool isManualExposureSupported;
   final double minISO;
@@ -487,4 +501,12 @@ abstract class CameraInterface {
   bool isVideoRecordingAndImageAnalysisSupported(PigeonSensorPosition sensor);
 
   bool isMultiCamSupported();
+
+  // === VIDEO CONFIGURATION ===
+
+  /// Query supported video resolution/fps combinations from the device.
+  List<VideoConfigurationOption> getSupportedVideoConfigurations();
+
+  /// Apply a specific video resolution and frame rate.
+  void setVideoConfiguration(int width, int height, int fps);
 }

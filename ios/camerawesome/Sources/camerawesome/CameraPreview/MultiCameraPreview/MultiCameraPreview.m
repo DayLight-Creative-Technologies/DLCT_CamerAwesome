@@ -615,4 +615,15 @@
   }
 }
 
+// === VIDEO CONFIGURATION ===
+
+- (NSArray<VideoConfigurationOption *> *)getSupportedVideoConfigurations {
+  // Multi camera does not support video recording — return empty list
+  return @[];
+}
+
+- (void)setVideoConfiguration:(NSInteger)width height:(NSInteger)height fps:(NSInteger)fps error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
+  *error = [FlutterError errorWithCode:@"MULTI_CAMERA_UNSUPPORTED" message:@"video configuration is not supported with multi camera" details:nil];
+}
+
 @end

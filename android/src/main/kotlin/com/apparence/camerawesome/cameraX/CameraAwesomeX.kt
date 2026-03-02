@@ -957,6 +957,91 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
     }
 
 
+    // === VIDEO CONFIGURATION ===
+
+    @SuppressLint("RestrictedApi", "UnsafeOptInUsageError")
+    override fun getSupportedVideoConfigurations(): List<VideoConfigurationOption> {
+        val cameraInfo = cameraState.previewCamera?.cameraInfo
+            ?: cameraState.concurrentCamera?.cameras?.firstOrNull()?.cameraInfo
+            ?: return emptyList()
+
+        val supportedQualities = QualitySelector.getSupportedQualities(cameraInfo)
+
+        // Map Quality to label + dimensions
+        data class QualityInfo(val label: String, val width: Long, val height: Long)
+        val qualityMap = mapOf(
+            Quality.HD to QualityInfo("720p", 1280, 720),
+            Quality.FHD to QualityInfo("1080p", 1920, 1080),
+            Quality.UHD to QualityInfo("4K", 3840, 2160),
+        )
+
+        // Get device's supported fps ranges via Camera2 interop
+        val camera2Info = Camera2CameraInfo.from(cameraInfo)
+        val fpsRanges: Array<Range<Int>>? = try {
+            camera2Info.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+        } catch (e: Exception) {
+            null
+        }
+
+        val standardFps = listOf(24L, 30L, 60L)
+        val supportedStandardFps = if (fpsRanges != null) {
+            standardFps.filter { fps ->
+                fpsRanges.any { range -> fps >= range.lower && fps <= range.upper }
+            }
+        } else {
+            listOf(30L) // Safe fallback
+        }
+
+        val results = mutableListOf<VideoConfigurationOption>()
+        // Sort by resolution ascending: HD < FHD < UHD
+        val sortOrder = listOf(Quality.HD, Quality.FHD, Quality.UHD)
+        for (quality in sortOrder) {
+            if (quality !in supportedQualities) continue
+            val info = qualityMap[quality] ?: continue
+
+            results.add(
+                VideoConfigurationOption(
+                    label = info.label,
+                    width = info.width,
+                    height = info.height,
+                    supportedFps = supportedStandardFps,
+                )
+            )
+        }
+
+        return results
+    }
+
+    @SuppressLint("RestrictedApi", "UnsafeOptInUsageError")
+    override fun setVideoConfiguration(width: Long, height: Long, fps: Long) {
+        // Map dimensions to CameraX Quality
+        val quality = when {
+            width == 1280L && height == 720L -> Quality.HD
+            width == 1920L && height == 1080L -> Quality.FHD
+            width == 3840L && height == 2160L -> Quality.UHD
+            else -> Quality.FHD
+        }
+
+        // Rebuild video capture with new quality
+        cameraState.rebuildVideoCapture(quality, fps)
+
+        // Apply fps via Camera2 interop
+        val cameraControl = cameraState.previewCamera?.cameraControl
+            ?: cameraState.concurrentCamera?.cameras?.firstOrNull()?.cameraControl
+        if (cameraControl != null) {
+            try {
+                val camera2Control = Camera2CameraControl.from(cameraControl)
+                val fpsRange = Range(fps.toInt(), fps.toInt())
+                val options = CaptureRequestOptions.Builder()
+                    .setCaptureRequestOption(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fpsRange)
+                    .build()
+                camera2Control.setCaptureRequestOptions(options)
+            } catch (e: Exception) {
+                Log.w("CameraAwesomeX", "Failed to set fps via Camera2 interop: ${e.message}")
+            }
+        }
+    }
+
     //    FLUTTER ATTACHMENTS
     override fun onAttachedToEngine(binding: FlutterPluginBinding) {
         this.binding = binding

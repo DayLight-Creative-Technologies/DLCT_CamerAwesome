@@ -438,6 +438,18 @@ class CamerawesomePlugin {
     return CameraInterface().isMultiCamSupported();
   }
 
+  // === VIDEO CONFIGURATION ===
+
+  /// Query supported video resolution/fps combinations from the device.
+  static Future<List<VideoConfigurationOption?>> getSupportedVideoConfigurations() {
+    return CameraInterface().getSupportedVideoConfigurations();
+  }
+
+  /// Apply a specific video resolution and frame rate.
+  static Future<void> setVideoConfiguration(int width, int height, int fps) {
+    return CameraInterface().setVideoConfiguration(width, height, fps);
+  }
+
   /// Change aspect ratio when a photo is taken
   static Future<void> setAspectRatio(String ratio) {
     return CameraInterface().setAspectRatio(ratio.toUpperCase());

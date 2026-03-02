@@ -162,6 +162,7 @@ typedef NS_ENUM(NSUInteger, AnalysisRotation) {
 @class PlaneWrapper;
 @class CropRectWrapper;
 @class AnalysisImageWrapper;
+@class VideoConfigurationOption;
 @class ExposureCapabilities;
 
 @interface PreviewSize : NSObject
@@ -307,6 +308,19 @@ typedef NS_ENUM(NSUInteger, AnalysisRotation) {
 @property(nonatomic, strong, nullable) AnalysisRotationBox * rotation;
 @end
 
+@interface VideoConfigurationOption : NSObject
+/// `init` unavailable to enforce nonnull fields, see the `make` class method.
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)makeWithLabel:(NSString *)label
+    width:(NSInteger )width
+    height:(NSInteger )height
+    supportedFps:(NSArray<NSNumber *> *)supportedFps;
+@property(nonatomic, copy) NSString * label;
+@property(nonatomic, assign) NSInteger  width;
+@property(nonatomic, assign) NSInteger  height;
+@property(nonatomic, copy) NSArray<NSNumber *> * supportedFps;
+@end
+
 @interface ExposureCapabilities : NSObject
 /// `init` unavailable to enforce nonnull fields, see the `make` class method.
 - (instancetype)init NS_UNAVAILABLE;
@@ -417,6 +431,12 @@ extern void SetUpAnalysisImageUtilsWithSuffix(id<FlutterBinaryMessenger> binaryM
 - (void)isVideoRecordingAndImageAnalysisSupportedSensor:(PigeonSensorPosition)sensor completion:(void (^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.
 - (nullable NSNumber *)isMultiCamSupportedWithError:(FlutterError *_Nullable *_Nonnull)error;
+/// Query supported video resolution/fps combinations from the device.
+///
+/// @return `nil` only when `error != nil`.
+- (nullable NSArray<VideoConfigurationOption *> *)getSupportedVideoConfigurationsWithError:(FlutterError *_Nullable *_Nonnull)error;
+/// Apply a specific video resolution and frame rate.
+- (void)setVideoConfigurationWidth:(NSInteger)width height:(NSInteger)height fps:(NSInteger)fps error:(FlutterError *_Nullable *_Nonnull)error;
 @end
 
 extern void SetUpCameraInterface(id<FlutterBinaryMessenger> binaryMessenger, NSObject<CameraInterface> *_Nullable api);

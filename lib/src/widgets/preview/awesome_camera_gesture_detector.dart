@@ -71,8 +71,8 @@ class _AwesomeCameraGestureDetector
 
   // Logarithmic pinch-to-zoom: finger spread is mapped through log2 so that
   // doubling finger distance always produces the same zoom delta regardless of
-  // current zoom level. Sensitivity of 0.35 matches native camera feel.
-  static const double _sensitivity = 0.35;
+  // current zoom level. Lower = more finger movement required.
+  static const double _sensitivity = 0.20;
   double _gestureStartZoom = 0;
 
   Offset? _tapPosition;

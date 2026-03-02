@@ -75,6 +75,8 @@ AVCaptureAudioDataOutputSampleBufferDelegate>
 - (void)setManualExposure:(double)iso durationInSeconds:(double)durationInSeconds completion:(void (^)(FlutterError * _Nullable))completion;
 - (void)setAutoExposure:(void (^)(FlutterError * _Nullable))completion;
 - (void)setSmoothZoom:(float)zoom rate:(float)rate completion:(void (^)(FlutterError * _Nullable))completion;
+- (NSArray<VideoConfigurationOption *> *)getSupportedVideoConfigurations;
+- (void)setVideoConfiguration:(NSInteger)width height:(NSInteger)height fps:(NSInteger)fps error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error;
 
 @end
 

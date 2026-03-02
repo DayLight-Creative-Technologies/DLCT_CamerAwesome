@@ -591,9 +591,125 @@
 
 - (void)setMirrorFrontCamera:(bool)value error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
   _mirrorFrontCamera = value;
-  
+
   if ([_captureConnection isVideoMirroringSupported]) {
       [_captureConnection setVideoMirrored:value];
+  }
+}
+
+// === VIDEO CONFIGURATION ===
+
+- (NSArray<VideoConfigurationOption *> *)getSupportedVideoConfigurations {
+  NSMutableDictionary<NSString *, NSMutableSet<NSNumber *> *> *resolutionFpsMap = [NSMutableDictionary dictionary];
+
+  // Standard resolutions we care about (width x height in landscape)
+  NSDictionary<NSString *, NSValue *> *standardResolutions = @{
+    @"720p":  [NSValue valueWithCGSize:CGSizeMake(1280, 720)],
+    @"1080p": [NSValue valueWithCGSize:CGSizeMake(1920, 1080)],
+    @"4K":    [NSValue valueWithCGSize:CGSizeMake(3840, 2160)],
+  };
+
+  for (AVCaptureDeviceFormat *format in _captureDevice.formats) {
+    CMVideoDimensions dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
+
+    // Match to standard resolutions
+    NSString *matchedLabel = nil;
+    for (NSString *label in standardResolutions) {
+      CGSize target = [standardResolutions[label] CGSizeValue];
+      if (dims.width == (int)target.width && dims.height == (int)target.height) {
+        matchedLabel = label;
+        break;
+      }
+    }
+    if (matchedLabel == nil) continue;
+
+    // Collect supported fps values from this format
+    for (AVFrameRateRange *range in format.videoSupportedFrameRateRanges) {
+      NSMutableSet<NSNumber *> *fpsSet = resolutionFpsMap[matchedLabel];
+      if (fpsSet == nil) {
+        fpsSet = [NSMutableSet set];
+        resolutionFpsMap[matchedLabel] = fpsSet;
+      }
+      // Add standard fps values that fall within this range
+      NSArray<NSNumber *> *standardFps = @[@24, @25, @30, @50, @60];
+      for (NSNumber *fps in standardFps) {
+        if ([fps doubleValue] >= range.minFrameRate && [fps doubleValue] <= range.maxFrameRate) {
+          [fpsSet addObject:fps];
+        }
+      }
+    }
+  }
+
+  // Build result sorted by resolution ascending
+  NSArray<NSString *> *sortOrder = @[@"720p", @"1080p", @"4K"];
+  NSMutableArray<VideoConfigurationOption *> *results = [NSMutableArray array];
+
+  for (NSString *label in sortOrder) {
+    NSMutableSet<NSNumber *> *fpsSet = resolutionFpsMap[label];
+    if (fpsSet == nil || fpsSet.count == 0) continue;
+
+    CGSize size = [standardResolutions[label] CGSizeValue];
+    NSArray<NSNumber *> *sortedFps = [[fpsSet allObjects] sortedArrayUsingSelector:@selector(compare:)];
+
+    VideoConfigurationOption *option = [VideoConfigurationOption makeWithLabel:label
+                                                                        width:(NSInteger)size.width
+                                                                       height:(NSInteger)size.height
+                                                                 supportedFps:sortedFps];
+    [results addObject:option];
+  }
+
+  return results;
+}
+
+- (void)setVideoConfiguration:(NSInteger)width height:(NSInteger)height fps:(NSInteger)fps error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
+  // Map dimensions to VideoRecordingQuality
+  if (width == 1280 && height == 720) {
+    _recordingQuality = VideoRecordingQualityHd;
+  } else if (width == 1920 && height == 1080) {
+    _recordingQuality = VideoRecordingQualityFhd;
+  } else if (width == 3840 && height == 2160) {
+    _recordingQuality = VideoRecordingQualityUhd;
+  }
+
+  // Update stored video options fps
+  if (_videoOptions != nil) {
+    _videoOptions = [CupertinoVideoOptions makeWithFileType:_videoOptions.fileType
+                                                      codec:_videoOptions.codec
+                                                        fps:@(fps)];
+  } else {
+    _videoOptions = [CupertinoVideoOptions makeWithFileType:nil codec:nil fps:@(fps)];
+  }
+
+  // Apply fps immediately so the preview reflects the new frame rate
+  NSError *lockError;
+  if ([_captureDevice lockForConfiguration:&lockError]) {
+    CMTime frameDuration = CMTimeMake(1, (int32_t)fps);
+
+    // Find a format that supports this resolution and fps
+    CGSize targetSize = CGSizeMake(width, height);
+    AVCaptureDeviceFormat *bestFormat = nil;
+    for (AVCaptureDeviceFormat *format in _captureDevice.formats) {
+      CMVideoDimensions dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
+      if (dims.width == (int)targetSize.width && dims.height == (int)targetSize.height) {
+        for (AVFrameRateRange *range in format.videoSupportedFrameRateRanges) {
+          if (fps >= range.minFrameRate && fps <= range.maxFrameRate) {
+            bestFormat = format;
+            break;
+          }
+        }
+        if (bestFormat != nil) break;
+      }
+    }
+
+    if (bestFormat != nil) {
+      _captureDevice.activeFormat = bestFormat;
+    }
+
+    _captureDevice.activeVideoMinFrameDuration = frameDuration;
+    _captureDevice.activeVideoMaxFrameDuration = frameDuration;
+    [_captureDevice unlockForConfiguration];
+  } else {
+    *error = [FlutterError errorWithCode:@"VIDEO_CONFIG_ERROR" message:@"can't lock device for configuration" details:[lockError localizedDescription]];
   }
 }
 
