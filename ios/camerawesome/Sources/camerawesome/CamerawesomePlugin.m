@@ -619,7 +619,29 @@ FlutterEventSink physicalButtonEventSink;
 }
 
 - (nullable NSNumber *)getMinZoomWithError:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
-  return @(0);
+  if (self.camera == nil && self.multiCamera == nil) {
+    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
+    return nil;
+  }
+
+  if (self.multiCamera != nil) {
+    return @([self.multiCamera getMinZoom]);
+  } else {
+    return @([self.camera getMinZoom]);
+  }
+}
+
+- (nullable NSNumber *)getOpticalMaxZoomWithError:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
+  if (self.camera == nil && self.multiCamera == nil) {
+    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
+    return nil;
+  }
+
+  if (self.multiCamera != nil) {
+    return @([self.multiCamera getOpticalMaxZoom]);
+  } else {
+    return @([self.camera getOpticalMaxZoom]);
+  }
 }
 
 - (void)setZoomZoom:(double)zoom error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {

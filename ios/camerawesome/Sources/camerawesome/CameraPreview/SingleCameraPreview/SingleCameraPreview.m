@@ -303,11 +303,26 @@
   return _currentPreviewSize;
 }
 
-// Get max zoom level
+// Get min zoom level (< 1.0 on virtual multi-lens devices for ultra-wide)
+- (CGFloat)getMinZoom {
+  return _captureDevice.minAvailableVideoZoomFactor;
+}
+
+// Get max zoom level (digital + optical combined)
 - (CGFloat)getMaxZoom {
   CGFloat maxZoom = _captureDevice.activeFormat.videoMaxZoomFactor;
-  // Not sure why on iPhone 14 Pro, zoom at 90 not working, so let's block to 50 which is very high
   return maxZoom > 50.0 ? 50.0 : maxZoom;
+}
+
+// Get optical max zoom — the highest zoom factor before digital zoom begins.
+// On virtual multi-lens devices, this is the last lens switch-over point.
+// On single-lens devices, returns 1.0 (any zoom beyond 1x is digital).
+- (CGFloat)getOpticalMaxZoom {
+  NSArray<NSNumber *> *switchOvers = _captureDevice.activeFormat.virtualDeviceSwitchOverVideoZoomFactors;
+  if (switchOvers != nil && switchOvers.count > 0) {
+    return switchOvers.lastObject.doubleValue;
+  }
+  return 1.0;
 }
 
 /// Dispose camera inputs & outputs
@@ -393,11 +408,13 @@
   }
 }
 
-/// Set zoom level
+/// Set zoom level. Maps normalized 0.0-1.0 to the device's full zoom range (minZoom...maxZoom).
 - (void)setZoom:(float)value error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
+  CGFloat minZoom = [self getMinZoom];
   CGFloat maxZoom = [self getMaxZoom];
-  CGFloat scaledZoom = value * (maxZoom - 1.0f) + 1.0f;
-  
+  CGFloat scaledZoom = value * (maxZoom - minZoom) + minZoom;
+  scaledZoom = MAX(minZoom, MIN(maxZoom, scaledZoom));
+
   NSError *zoomError;
   if ([_captureDevice lockForConfiguration:&zoomError]) {
     _captureDevice.videoZoomFactor = scaledZoom;
@@ -559,9 +576,10 @@
 // === SMOOTH ZOOM ===
 
 - (void)setSmoothZoom:(float)zoom rate:(float)rate completion:(void (^)(FlutterError * _Nullable))completion {
+  CGFloat minZoom = [self getMinZoom];
   CGFloat maxZoom = [self getMaxZoom];
-  CGFloat scaledZoom = zoom * (maxZoom - 1.0f) + 1.0f;
-  scaledZoom = MAX(1.0f, MIN(maxZoom, scaledZoom));
+  CGFloat scaledZoom = zoom * (maxZoom - minZoom) + minZoom;
+  scaledZoom = MAX(minZoom, MIN(maxZoom, scaledZoom));
 
   NSError *lockError;
   if ([_captureDevice lockForConfiguration:&lockError]) {
@@ -648,23 +666,45 @@
   [self.imageStreamController receivedImageFromStream];
 }
 
-/// Get the first available camera on device (front or rear)
+/// Get the best available camera on device (front or rear).
+/// For back camera: prefers virtual triple/dual camera (spans ultra-wide through telephoto)
+/// which exposes the full zoom range including sub-1.0 factors for ultra-wide.
 - (NSString *)selectAvailableCamera:(PigeonSensorPosition)sensor {
   if (_captureDeviceId != nil) {
     return _captureDeviceId;
   }
-  
-  // TODO: add dual & triple camera
-  NSArray<AVCaptureDevice *> *devices = [[NSArray alloc] init];
+
+  NSInteger cameraPosition = (sensor == PigeonSensorPositionFront) ? AVCaptureDevicePositionFront : AVCaptureDevicePositionBack;
+
+  // For back camera, try virtual multi-lens devices first (triple > dual wide > wide-angle)
+  if (cameraPosition == AVCaptureDevicePositionBack) {
+    // Triple camera (ultra-wide + wide + telephoto) — full zoom range
+    AVCaptureDevice *tripleCamera = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInTripleCamera
+                                                                       mediaType:AVMediaTypeVideo
+                                                                        position:AVCaptureDevicePositionBack];
+    if (tripleCamera != nil) return [tripleCamera uniqueID];
+
+    // Dual wide camera (ultra-wide + wide) — still gets sub-1.0 zoom
+    AVCaptureDevice *dualWideCamera = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualWideCamera
+                                                                         mediaType:AVMediaTypeVideo
+                                                                          position:AVCaptureDevicePositionBack];
+    if (dualWideCamera != nil) return [dualWideCamera uniqueID];
+
+    // Dual camera (wide + telephoto)
+    AVCaptureDevice *dualCamera = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualCamera
+                                                                     mediaType:AVMediaTypeVideo
+                                                                      position:AVCaptureDevicePositionBack];
+    if (dualCamera != nil) return [dualCamera uniqueID];
+  }
+
+  // Fallback: single wide-angle camera (all devices)
   AVCaptureDeviceDiscoverySession *discoverySession = [AVCaptureDeviceDiscoverySession
-                                                       discoverySessionWithDeviceTypes:@[ AVCaptureDeviceTypeBuiltInWideAngleCamera, ]
+                                                       discoverySessionWithDeviceTypes:@[ AVCaptureDeviceTypeBuiltInWideAngleCamera ]
                                                        mediaType:AVMediaTypeVideo
                                                        position:AVCaptureDevicePositionUnspecified];
-  devices = discoverySession.devices;
-  
-  NSInteger cameraType = (sensor == PigeonSensorPositionFront) ? AVCaptureDevicePositionFront : AVCaptureDevicePositionBack;
-  for (AVCaptureDevice *device in devices) {
-    if ([device position] == cameraType) {
+
+  for (AVCaptureDevice *device in discoverySession.devices) {
+    if ([device position] == cameraPosition) {
       return [device uniqueID];
     }
   }

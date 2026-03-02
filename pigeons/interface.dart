@@ -417,6 +417,11 @@ abstract class CameraInterface {
 
   double getMaxZoom();
 
+  /// Returns the highest optical zoom factor before digital zoom begins.
+  /// On virtual multi-lens devices, this is the last lens switch-over point.
+  /// On single-lens devices, returns 1.0.
+  double getOpticalMaxZoom();
+
   // === MANUAL EXPOSURE ===
 
   /// Full exposure capabilities in a single round-trip.

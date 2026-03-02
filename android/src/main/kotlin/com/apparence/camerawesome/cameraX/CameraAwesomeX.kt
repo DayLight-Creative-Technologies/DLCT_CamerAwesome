@@ -651,6 +651,14 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
         return cameraState.minZoomRatio
     }
 
+    /**
+     * Android CameraX doesn't expose optical zoom boundaries directly.
+     * Return max zoom as a conservative fallback — all zoom is treated as usable.
+     */
+    override fun getOpticalMaxZoom(): Double {
+        return cameraState.maxZoomRatio
+    }
+
     // === MANUAL EXPOSURE ===
 
     @SuppressLint("UnsafeOptInUsageError", "RestrictedApi")

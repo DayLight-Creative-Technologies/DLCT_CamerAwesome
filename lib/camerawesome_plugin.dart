@@ -386,9 +386,16 @@ class CamerawesomePlugin {
     return CameraInterface().getMaxZoom();
   }
 
-  /// returns the min zoom available on device
+  /// returns the min zoom available on device (< 1.0 on multi-lens devices for ultra-wide)
   static Future<double?> getMinZoom() {
     return CameraInterface().getMinZoom();
+  }
+
+  /// returns the highest optical zoom factor before digital zoom begins.
+  /// On virtual multi-lens devices, this is the last lens switch-over point.
+  /// On single-lens devices, returns 1.0.
+  static Future<double?> getOpticalMaxZoom() {
+    return CameraInterface().getOpticalMaxZoom();
   }
 
   // === MANUAL EXPOSURE ===

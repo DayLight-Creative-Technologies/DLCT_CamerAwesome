@@ -1282,6 +1282,26 @@ void SetUpCameraInterfaceWithSuffix(id<FlutterBinaryMessenger> binaryMessenger, 
       [channel setMessageHandler:nil];
     }
   }
+  /// Returns the highest optical zoom factor before digital zoom begins.
+  /// On virtual multi-lens devices, this is the last lens switch-over point.
+  /// On single-lens devices, returns 1.0.
+  {
+    FlutterBasicMessageChannel *channel =
+      [[FlutterBasicMessageChannel alloc]
+        initWithName:[NSString stringWithFormat:@"%@%@", @"dev.flutter.pigeon.camerawesome.CameraInterface.getOpticalMaxZoom", messageChannelSuffix]
+        binaryMessenger:binaryMessenger
+        codec:nullGetPigeonCodec()];
+    if (api) {
+      NSCAssert([api respondsToSelector:@selector(getOpticalMaxZoomWithError:)], @"CameraInterface api (%@) doesn't respond to @selector(getOpticalMaxZoomWithError:)", api);
+      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
+        FlutterError *error;
+        NSNumber *output = [api getOpticalMaxZoomWithError:&error];
+        callback(wrapResult(output, error));
+      }];
+    } else {
+      [channel setMessageHandler:nil];
+    }
+  }
   /// Full exposure capabilities in a single round-trip.
   {
     FlutterBasicMessageChannel *channel =
@@ -1634,7 +1654,7 @@ void SetUpCameraInterfaceWithSuffix(id<FlutterBinaryMessenger> binaryMessenger, 
       NSCAssert([api respondsToSelector:@selector(setFilterMatrix:error:)], @"CameraInterface api (%@) doesn't respond to @selector(setFilterMatrix:error:)", api);
       [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
         NSArray<id> *args = message;
-        NSArray<NSNumber *> *arg_matrix = GetNullableObjectAtIndex(args, 0);
+        NSArray<double> *arg_matrix = GetNullableObjectAtIndex(args, 0);
         FlutterError *error;
         [api setFilterMatrix:arg_matrix error:&error];
         callback(wrapResult(nil, error));

@@ -134,19 +134,30 @@
   [self.devices removeAllObjects];
 }
 
-// Get max zoom level
+- (CGFloat)getMinZoom {
+  return self.devices.firstObject.device.minAvailableVideoZoomFactor;
+}
+
 - (CGFloat)getMaxZoom {
   CGFloat maxZoom = self.devices.firstObject.device.activeFormat.videoMaxZoomFactor;
-  // Not sure why on iPhone 14 Pro, zoom at 90 not working, so let's block to 50 which is very high
   return maxZoom > 50.0 ? 50.0 : maxZoom;
+}
+
+- (CGFloat)getOpticalMaxZoom {
+  NSArray<NSNumber *> *switchOvers = self.devices.firstObject.device.activeFormat.virtualDeviceSwitchOverVideoZoomFactors;
+  if (switchOvers != nil && switchOvers.count > 0) {
+    return switchOvers.lastObject.doubleValue;
+  }
+  return 1.0;
 }
 
 /// Set zoom level
 - (void)setZoom:(float)value error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
   AVCaptureDevice *mainDevice = self.devices.firstObject.device;
-  
+
+  CGFloat minZoom = [self getMinZoom];
   CGFloat maxZoom = [self getMaxZoom];
-  CGFloat scaledZoom = value * (maxZoom - 1.0f) + 1.0f;
+  CGFloat scaledZoom = value * (maxZoom - minZoom) + minZoom;
   
   NSError *zoomError;
   if ([mainDevice lockForConfiguration:&zoomError]) {
@@ -349,9 +360,10 @@
 
 - (void)setSmoothZoom:(float)zoom rate:(float)rate completion:(void (^)(FlutterError * _Nullable))completion {
   AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  CGFloat minZoom = [self getMinZoom];
   CGFloat maxZoom = [self getMaxZoom];
-  CGFloat scaledZoom = zoom * (maxZoom - 1.0f) + 1.0f;
-  scaledZoom = MAX(1.0f, MIN(maxZoom, scaledZoom));
+  CGFloat scaledZoom = zoom * (maxZoom - minZoom) + minZoom;
+  scaledZoom = MAX(minZoom, MIN(maxZoom, scaledZoom));
 
   NSError *lockError;
   if ([mainDevice lockForConfiguration:&lockError]) {

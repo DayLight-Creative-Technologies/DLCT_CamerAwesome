@@ -869,6 +869,12 @@ interface CameraInterface {
   fun setCorrection(brightness: Double)
   fun getMinZoom(): Double
   fun getMaxZoom(): Double
+  /**
+   * Returns the highest optical zoom factor before digital zoom begins.
+   * On virtual multi-lens devices, this is the last lens switch-over point.
+   * On single-lens devices, returns 1.0.
+   */
+  fun getOpticalMaxZoom(): Double
   /** Full exposure capabilities in a single round-trip. */
   fun getExposureCapabilities(): ExposureCapabilities
   /** ISO priority mode. Pass -1 to return to auto. */
@@ -1307,6 +1313,21 @@ interface CameraInterface {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               listOf(api.getMaxZoom())
+            } catch (exception: Throwable) {
+              wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.camerawesome.CameraInterface.getOpticalMaxZoom$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.getOpticalMaxZoom())
             } catch (exception: Throwable) {
               wrapError(exception)
             }

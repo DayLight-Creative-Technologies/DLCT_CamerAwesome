@@ -379,6 +379,12 @@ extern void SetUpAnalysisImageUtilsWithSuffix(id<FlutterBinaryMessenger> binaryM
 - (nullable NSNumber *)getMinZoomWithError:(FlutterError *_Nullable *_Nonnull)error;
 /// @return `nil` only when `error != nil`.
 - (nullable NSNumber *)getMaxZoomWithError:(FlutterError *_Nullable *_Nonnull)error;
+/// Returns the highest optical zoom factor before digital zoom begins.
+/// On virtual multi-lens devices, this is the last lens switch-over point.
+/// On single-lens devices, returns 1.0.
+///
+/// @return `nil` only when `error != nil`.
+- (nullable NSNumber *)getOpticalMaxZoomWithError:(FlutterError *_Nullable *_Nonnull)error;
 /// Full exposure capabilities in a single round-trip.
 ///
 /// @return `nil` only when `error != nil`.
@@ -407,7 +413,7 @@ extern void SetUpAnalysisImageUtilsWithSuffix(id<FlutterBinaryMessenger> binaryM
 - (void)setExifPreferencesExifPreferences:(ExifPreferences *)exifPreferences completion:(void (^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 - (void)startAnalysisWithError:(FlutterError *_Nullable *_Nonnull)error;
 - (void)stopAnalysisWithError:(FlutterError *_Nullable *_Nonnull)error;
-- (void)setFilterMatrix:(NSArray<NSNumber *> *)matrix error:(FlutterError *_Nullable *_Nonnull)error;
+- (void)setFilterMatrix:(NSArray<double> *)matrix error:(FlutterError *_Nullable *_Nonnull)error;
 - (void)isVideoRecordingAndImageAnalysisSupportedSensor:(PigeonSensorPosition)sensor completion:(void (^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.
 - (nullable NSNumber *)isMultiCamSupportedWithError:(FlutterError *_Nullable *_Nonnull)error;
