@@ -601,27 +601,30 @@
 
 - (NSArray<VideoConfigurationOption *> *)getSupportedVideoConfigurations {
   NSMutableDictionary<NSString *, NSMutableSet<NSNumber *> *> *resolutionFpsMap = [NSMutableDictionary dictionary];
+  NSMutableDictionary<NSString *, NSValue *> *resolvedSizes = [NSMutableDictionary dictionary];
 
-  // Standard resolutions we care about (width x height in landscape)
-  NSDictionary<NSString *, NSValue *> *standardResolutions = @{
-    @"720p":  [NSValue valueWithCGSize:CGSizeMake(1280, 720)],
-    @"1080p": [NSValue valueWithCGSize:CGSizeMake(1920, 1080)],
-    @"4K":    [NSValue valueWithCGSize:CGSizeMake(3840, 2160)],
-  };
+  NSLog(@"📹 getSupportedVideoConfigurations: device=%@, format count=%lu",
+        _captureDevice.localizedName, (unsigned long)_captureDevice.formats.count);
 
   for (AVCaptureDeviceFormat *format in _captureDevice.formats) {
     CMVideoDimensions dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
 
-    // Match to standard resolutions
+    // Match by height to handle both 16:9 and other aspect ratios
+    // 720p = height 720, 1080p = height 1080, 4K = height 2160
     NSString *matchedLabel = nil;
-    for (NSString *label in standardResolutions) {
-      CGSize target = [standardResolutions[label] CGSizeValue];
-      if (dims.width == (int)target.width && dims.height == (int)target.height) {
-        matchedLabel = label;
-        break;
-      }
+    if (dims.height == 720 && dims.width >= 1280) {
+      matchedLabel = @"720p";
+    } else if (dims.height == 1080 && dims.width >= 1920) {
+      matchedLabel = @"1080p";
+    } else if (dims.height == 2160 && dims.width >= 3840) {
+      matchedLabel = @"4K";
     }
     if (matchedLabel == nil) continue;
+
+    // Store the actual dimensions for this resolution tier
+    if (resolvedSizes[matchedLabel] == nil) {
+      resolvedSizes[matchedLabel] = [NSValue valueWithCGSize:CGSizeMake(dims.width, dims.height)];
+    }
 
     // Collect supported fps values from this format
     for (AVFrameRateRange *range in format.videoSupportedFrameRateRanges) {
@@ -648,8 +651,10 @@
     NSMutableSet<NSNumber *> *fpsSet = resolutionFpsMap[label];
     if (fpsSet == nil || fpsSet.count == 0) continue;
 
-    CGSize size = [standardResolutions[label] CGSizeValue];
+    CGSize size = [resolvedSizes[label] CGSizeValue];
     NSArray<NSNumber *> *sortedFps = [[fpsSet allObjects] sortedArrayUsingSelector:@selector(compare:)];
+
+    NSLog(@"📹 Found: %@ (%dx%d) fps=%@", label, (int)size.width, (int)size.height, sortedFps);
 
     VideoConfigurationOption *option = [VideoConfigurationOption makeWithLabel:label
                                                                         width:(NSInteger)size.width
@@ -658,16 +663,19 @@
     [results addObject:option];
   }
 
+  NSLog(@"📹 Total video configurations: %lu", (unsigned long)results.count);
   return results;
 }
 
 - (void)setVideoConfiguration:(NSInteger)width height:(NSInteger)height fps:(NSInteger)fps error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
+  NSLog(@"📹 setVideoConfiguration: %ldx%ld @ %ldfps", (long)width, (long)height, (long)fps);
+
   // Map dimensions to VideoRecordingQuality
-  if (width == 1280 && height == 720) {
+  if (height <= 720) {
     _recordingQuality = VideoRecordingQualityHd;
-  } else if (width == 1920 && height == 1080) {
+  } else if (height <= 1080) {
     _recordingQuality = VideoRecordingQualityFhd;
-  } else if (width == 3840 && height == 2160) {
+  } else {
     _recordingQuality = VideoRecordingQualityUhd;
   }
 
@@ -680,17 +688,16 @@
     _videoOptions = [CupertinoVideoOptions makeWithFileType:nil codec:nil fps:@(fps)];
   }
 
-  // Apply fps immediately so the preview reflects the new frame rate
+  // Apply format + fps immediately so the preview reflects the new configuration
   NSError *lockError;
   if ([_captureDevice lockForConfiguration:&lockError]) {
     CMTime frameDuration = CMTimeMake(1, (int32_t)fps);
 
-    // Find a format that supports this resolution and fps
-    CGSize targetSize = CGSizeMake(width, height);
+    // Find a format that supports this resolution and fps (match by height)
     AVCaptureDeviceFormat *bestFormat = nil;
     for (AVCaptureDeviceFormat *format in _captureDevice.formats) {
       CMVideoDimensions dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
-      if (dims.width == (int)targetSize.width && dims.height == (int)targetSize.height) {
+      if (dims.height == (int)height && dims.width >= (int)width) {
         for (AVFrameRateRange *range in format.videoSupportedFrameRateRanges) {
           if (fps >= range.minFrameRate && fps <= range.maxFrameRate) {
             bestFormat = format;
@@ -702,6 +709,8 @@
     }
 
     if (bestFormat != nil) {
+      NSLog(@"📹 Applying format: %dx%d", CMVideoFormatDescriptionGetDimensions(bestFormat.formatDescription).width,
+            CMVideoFormatDescriptionGetDimensions(bestFormat.formatDescription).height);
       _captureDevice.activeFormat = bestFormat;
     }
 
