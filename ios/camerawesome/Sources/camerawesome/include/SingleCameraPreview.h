@@ -114,6 +114,10 @@ AVCaptureAudioDataOutputSampleBufferDelegate>
 - (void)setSmoothZoom:(float)zoom rate:(float)rate completion:(void (^)(FlutterError * _Nullable))completion;
 - (NSArray<VideoConfigurationOption *> *)getSupportedVideoConfigurations;
 - (void)setVideoConfiguration:(NSInteger)width height:(NSInteger)height fps:(NSInteger)fps error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error;
+
+// Audio session lifecycle — switch between .playAndRecord (camera) and .playback (media)
++ (void)activateRecordingAudioSession;
++ (void)restorePlaybackAudioSession;
 @end
 
 NS_ASSUME_NONNULL_END

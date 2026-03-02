@@ -1,3 +1,12 @@
+# 2.7.0
+
+- Fix audio recording regression: remove `addOutputWithNoConnections` from constructor that created hybrid managed/unmanaged session state conflicting with `addOutput` in `initCameraPreview:`
+- Fix volume buttons not working during video playback: AVAudioSession lifecycle now managed dynamically (`.playback` default, `.playAndRecord` only while camera is active)
+- Video resolution/FPS configuration: `getSupportedVideoConfigurations()` and `setVideoConfiguration(width, height, fps)` APIs
+- Format matching by height instead of exact dimensions for broader device compatibility
+- Clean up all debug NSLog/print spam from DLCT additions (27 debug logs removed, error logging preserved)
+- Audio session SSOT: single lifecycle owner (`SingleCameraPreview` class methods) replaces split AppDelegate + CamerAwesome ownership
+
 # 2.6.0
 
 - Manual exposure control: ISO priority, shutter priority, and full manual modes

@@ -559,9 +559,7 @@ class CamerawesomePlugin {
             .then((givenPermissions) => CamerAwesomePermission.values);
       }
     } catch (e) {
-      printLog("failed to check permissions here...");
-      // ignore: avoid_print
-      print(e);
+      printLog("failed to check permissions: $e");
     }
     return Future.value([]);
   }

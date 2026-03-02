@@ -109,21 +109,10 @@ class PreparingCameraState extends CameraState {
       (res) async {
         if (res == CameraPhysicalButton.volume_down ||
             res == CameraPhysicalButton.volume_up) {
-          print('📸 Physical button pressed: $res');
-          print('📸 Current camera state: ${cameraContext.state.runtimeType}');
           cameraContext.state.when(
-            onPhotoMode: (pm) {
-              print('📸 Taking photo...');
-              pm.takePhoto();
-            },
-            onVideoMode: (vm) {
-              print('📸 Starting video recording...');
-              vm.startRecording();
-            },
-            onVideoRecordingMode: (vrm) {
-              print('📸 Stopping video recording...');
-              vrm.stopRecording();
-            },
+            onPhotoMode: (pm) => pm.takePhoto(),
+            onVideoMode: (vm) => vm.startRecording(),
+            onVideoRecordingMode: (vrm) => vrm.stopRecording(),
           );
         }
       },

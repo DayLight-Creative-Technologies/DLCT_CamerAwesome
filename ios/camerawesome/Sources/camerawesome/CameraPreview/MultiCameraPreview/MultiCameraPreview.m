@@ -7,6 +7,14 @@
 
 #import "MultiCameraPreview.h"
 
+// Forward-declare audio session lifecycle methods from SingleCameraPreview
+// (can't import SingleCameraPreview.h directly due to circular header dependency)
+@class SingleCameraPreview;
+@interface SingleCameraPreview (AudioSession)
++ (void)activateRecordingAudioSession;
++ (void)restorePlaybackAudioSession;
+@end
+
 @implementation MultiCameraPreview
 
 - (instancetype)initWithSensors:(NSArray<PigeonSensor *> *)sensors
@@ -72,36 +80,25 @@
 /// Automatically restarts the session to prevent frozen preview
 - (void)handleSessionRuntimeError:(NSNotification *)notification {
   NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
-  NSLog(@"⚠️ AVCaptureSession runtime error: %@", error);
+  NSLog(@"AVCaptureSession runtime error: %@", error);
 
-  // Error -11800 (with underlying -10868) occurs after stopping video recording
-  // The session tries to reconfigure audio inputs/outputs and fails
-  // Solution: Restart the session to recover from the error
+  // Error -11800 (with underlying -10868) occurs after stopping video recording.
+  // The session tries to reconfigure audio inputs/outputs and fails.
+  // Restart the session to recover.
   if (error.code == AVErrorUnknown || error.code == -11800) {
-    NSLog(@"📸 Attempting to restart session after error...");
     dispatch_async(dispatch_get_main_queue(), ^{
       if (![self->_cameraSession isRunning]) {
-        NSLog(@"📸 Session stopped - restarting now");
         [self->_cameraSession startRunning];
-        NSLog(@"✅ Session restarted successfully");
-      } else {
-        NSLog(@"✅ Session still running - no restart needed");
       }
     });
   }
 }
 
-/// Handle AVCaptureSession stopped unexpectedly
-/// Restarts the session to prevent frozen preview
+/// Handle AVCaptureSession stopped unexpectedly — restart to prevent frozen preview
 - (void)handleSessionDidStopRunning:(NSNotification *)notification {
-  NSLog(@"⚠️ AVCaptureSession stopped unexpectedly");
-
-  // Session stopped (likely due to runtime error during reconfiguration)
-  // Restart it to resume preview
+  NSLog(@"AVCaptureSession stopped unexpectedly — restarting");
   dispatch_async(dispatch_get_main_queue(), ^{
-    NSLog(@"📸 Restarting stopped session...");
     [self->_cameraSession startRunning];
-    NSLog(@"✅ Session restarted after unexpected stop");
   });
 }
 
@@ -116,6 +113,9 @@
   [[NSNotificationCenter defaultCenter] removeObserver:self
                                                   name:AVCaptureSessionDidStopRunningNotification
                                                 object:_cameraSession];
+
+  // Restore audio session to .playback so volume buttons work for media playback
+  [SingleCameraPreview restorePlaybackAudioSession];
 }
 
 - (void)stop {
@@ -465,6 +465,8 @@
 }
 
 - (void)start {
+  // Switch audio session to .playAndRecord for video recording capability
+  [SingleCameraPreview activateRecordingAudioSession];
   dispatch_async(_dispatchQueue, ^{
     [self.cameraSession startRunning];
   });
