@@ -58,7 +58,9 @@ AVCaptureAudioDataOutputSampleBufferDelegate>
 - (void)start;
 - (void)stop;
 - (void)refresh;
+- (CGFloat)getMinZoom;
 - (CGFloat)getMaxZoom;
+- (CGFloat)getOpticalMaxZoom;
 - (void)setPreviewSize:(CGSize)previewSize error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error;
 - (CGSize)getEffectivPreviewSize;
 - (void)takePhotoSensors:(nonnull NSArray<PigeonSensor *> *)sensors paths:(nonnull NSArray<NSString *> *)paths completion:(nonnull void (^)(NSNumber * _Nullable, FlutterError * _Nullable))completion;
