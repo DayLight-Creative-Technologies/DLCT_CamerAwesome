@@ -1,3 +1,7 @@
+# 2.7.1
+
+- Fix build: import `SingleCameraPreview.h` in `MultiCameraPreview.m` instead of forward declaration (compiler needs full interface to resolve class method selectors)
+
 # 2.7.0
 
 - Fix audio recording regression: remove `addOutputWithNoConnections` from constructor that created hybrid managed/unmanaged session state conflicting with `addOutput` in `initCameraPreview:`
