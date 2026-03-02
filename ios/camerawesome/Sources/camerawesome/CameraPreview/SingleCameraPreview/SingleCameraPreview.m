@@ -145,42 +145,40 @@
   }
 }
 
-/// Init camera preview with Front or Rear sensor
+/// Init camera preview with Front or Rear sensor.
+/// Virtual multi-lens devices (triple/dual camera) require system-managed connections
+/// via addInput/addOutput. Manual addInputWithNoConnections breaks multi-port virtual devices.
 - (void)initCameraPreview:(PigeonSensorPosition)sensor {
-  // Here we set a preset which wont crash the device before switching to front or back
   [_captureSession setSessionPreset:AVCaptureSessionPresetPhoto];
-  
+
   NSError *error;
   _captureDevice = [AVCaptureDevice deviceWithUniqueID:[self selectAvailableCamera:sensor]];
   _captureVideoInput = [AVCaptureDeviceInput deviceInputWithDevice:_captureDevice error:&error];
-  
+
   if (error != nil) {
     _completion(nil, [FlutterError errorWithCode:@"CANNOT_OPEN_CAMERA" message:@"can't attach device to input" details:[error localizedDescription]]);
     return;
   }
-  
-  // Create connection
-  _captureConnection = [AVCaptureConnection connectionWithInputPorts:_captureVideoInput.ports
-                                                              output:_captureVideoOutput];
-  
-  // TODO: works but deprecated...
-  //  if ([_captureConnection isVideoMinFrameDurationSupported] && [_captureConnection isVideoMaxFrameDurationSupported]) {
-  //    CMTime frameDuration = CMTimeMake(1, 12);
-  //    [_captureConnection setVideoMinFrameDuration:frameDuration];
-  //    [_captureConnection setVideoMaxFrameDuration:frameDuration];
-  //  } else {
-  //    NSLog(@"Failed to set frame duration");
-  //  }
-  
-  // Attaching to session
-  [_captureSession addInputWithNoConnections:_captureVideoInput];
-  [_captureSession addConnection:_captureConnection];
-  
+
+  // Use system-managed connections (addInput + addOutput) instead of manual
+  // addInputWithNoConnections + addConnection. Virtual multi-lens devices have
+  // multiple ports and the system must manage routing between constituent cameras.
+  if ([_captureSession canAddInput:_captureVideoInput]) {
+    [_captureSession addInput:_captureVideoInput];
+  }
+
+  if ([_captureSession canAddOutput:_captureVideoOutput]) {
+    [_captureSession addOutput:_captureVideoOutput];
+  }
+
+  // Get the system-created connection for video
+  _captureConnection = [_captureVideoOutput connectionWithMediaType:AVMediaTypeVideo];
+
   // Creating photo output
   _capturePhotoOutput = [AVCapturePhotoOutput new];
   [_capturePhotoOutput setHighResolutionCaptureEnabled:YES];
   [_captureSession addOutput:_capturePhotoOutput];
-  
+
   // Mirror the preview only on portrait mode
   [_captureConnection setAutomaticallyAdjustsVideoMirroring:NO];
   [_captureConnection setVideoMirrored:(_cameraSensorPosition == PigeonSensorPositionFront)];
@@ -390,7 +388,7 @@
   [_videoController setAudioIsDisconnected:YES];
   
   [_captureSession removeOutput:_capturePhotoOutput];
-  [_captureSession removeConnection:_captureConnection];
+  [_captureSession removeOutput:_captureVideoOutput];
   
   _cameraSensorPosition = sensor.position;
   _captureDeviceId = sensor.deviceId;
