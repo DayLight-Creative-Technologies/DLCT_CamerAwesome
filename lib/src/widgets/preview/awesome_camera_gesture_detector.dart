@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:camerawesome/pigeon.dart';
 import 'package:flutter/gestures.dart';
@@ -67,8 +68,12 @@ class AwesomeCameraGestureDetector extends StatefulWidget {
 class _AwesomeCameraGestureDetector
     extends State<AwesomeCameraGestureDetector> {
   double _zoomScale = 0;
-  final double _accuracy = 0.01;
-  double? _lastScale;
+
+  // Logarithmic pinch-to-zoom: finger spread is mapped through log2 so that
+  // doubling finger distance always produces the same zoom delta regardless of
+  // current zoom level. Sensitivity of 0.35 matches native camera feel.
+  static const double _sensitivity = 0.35;
+  double _gestureStartZoom = 0;
 
   Offset? _tapPosition;
   Timer? _timer;
@@ -88,22 +93,20 @@ class _AwesomeCameraGestureDetector
               GestureRecognizerFactoryWithHandlers<ScaleGestureRecognizer>(
             () => ScaleGestureRecognizer()
               ..onStart = (_) {
-                _lastScale = null;
+                _gestureStartZoom = _zoomScale;
               }
               ..onUpdate = (ScaleUpdateDetails details) {
-                _lastScale ??= details.scale;
-                if (details.scale < (_lastScale! + 0.01) &&
-                    details.scale > (_lastScale! - 0.01)) {
-                  return;
-                } else if (_lastScale! < details.scale) {
-                  _zoomScale += _accuracy;
-                } else {
-                  _zoomScale -= _accuracy;
-                }
-
-                _zoomScale = _zoomScale.clamp(0, 1);
+                // log2(scale): doubling finger spread = +1.0, halving = -1.0.
+                // Multiplied by sensitivity to control how much zoom per spread.
+                final logDelta =
+                    math.log(details.scale.clamp(0.1, 10.0)) / math.ln2;
+                _zoomScale =
+                    (_gestureStartZoom + logDelta * _sensitivity).clamp(0, 1);
                 widget.onPreviewScale!.onScale(_zoomScale);
-                _lastScale = details.scale;
+              }
+              ..onEnd = (_) {
+                // Snapshot for next gesture
+                _gestureStartZoom = _zoomScale;
               },
             (instance) {},
           ),
