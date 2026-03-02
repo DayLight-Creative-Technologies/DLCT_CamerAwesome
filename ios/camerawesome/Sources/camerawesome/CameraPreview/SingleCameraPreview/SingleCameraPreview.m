@@ -318,7 +318,7 @@
 // On virtual multi-lens devices, this is the last lens switch-over point.
 // On single-lens devices, returns 1.0 (any zoom beyond 1x is digital).
 - (CGFloat)getOpticalMaxZoom {
-  NSArray<NSNumber *> *switchOvers = _captureDevice.activeFormat.virtualDeviceSwitchOverVideoZoomFactors;
+  NSArray<NSNumber *> *switchOvers = _captureDevice.virtualDeviceSwitchOverVideoZoomFactors;
   if (switchOvers != nil && switchOvers.count > 0) {
     return switchOvers.lastObject.doubleValue;
   }

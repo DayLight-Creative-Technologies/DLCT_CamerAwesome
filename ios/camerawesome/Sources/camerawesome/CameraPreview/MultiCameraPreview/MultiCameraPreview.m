@@ -144,7 +144,7 @@
 }
 
 - (CGFloat)getOpticalMaxZoom {
-  NSArray<NSNumber *> *switchOvers = self.devices.firstObject.device.activeFormat.virtualDeviceSwitchOverVideoZoomFactors;
+  NSArray<NSNumber *> *switchOvers = self.devices.firstObject.device.virtualDeviceSwitchOverVideoZoomFactors;
   if (switchOvers != nil && switchOvers.count > 0) {
     return switchOvers.lastObject.doubleValue;
   }
