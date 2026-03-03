@@ -20,6 +20,13 @@
 }
 
 - (void)tryToSendPhysicalEvent:(PhysicalButton)physicalButton {
+  // Ignore spurious events fired during arming (JPSVolumeButtonHandler
+  // programmatically adjusts the system volume on startHandler:YES,
+  // which triggers a KVO notification that looks like a button press).
+  if (_isArming) {
+    return;
+  }
+
   if (debounceTimer != nil) {
     [debounceTimer invalidate];
     debounceTimer = nil;
@@ -49,7 +56,14 @@
 }
 
 - (void)startListening {
+  _isArming = YES;
   [self.volumeButtonHandler startHandler:YES];
+  // Allow 1s for the volume-reset KVO notification to settle before
+  // accepting real button presses.
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
+                 dispatch_get_main_queue(), ^{
+    self->_isArming = NO;
+  });
 }
 
 - (void)stopListening {

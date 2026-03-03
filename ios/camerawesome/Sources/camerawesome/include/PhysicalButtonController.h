@@ -14,6 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface PhysicalButtonController : NSObject {
   NSTimer *debounceTimer;
+  BOOL _isArming;
 }
 
 @property(nonatomic) FlutterEventSink physicalButtonEventSink;
