@@ -166,22 +166,37 @@ FlutterEventSink physicalButtonEventSink;
 }
 
 - (nullable NSNumber *)stopWithError:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
+  NSLog(@"CamerawesomePlugin: stopWithError called — camera=%p multiCamera=%p", self.camera, self.multiCamera);
   if (self.camera == nil && self.multiCamera == nil) {
+    NSLog(@"CamerawesomePlugin: stopWithError — camera already nil, returning NO");
     *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
     return @(NO);
   }
-  
+
   for (NSNumber *textureId in self->_texturesIds) {
     [self->_textureRegistry unregisterTexture:[textureId longLongValue]];
-    dispatch_async(_dispatchQueue, ^{
-      if (self.multiCamera != nil) {
-        [self->_multiCamera stop];
-      } else {
-        [self->_camera stop];
-      }
-    });
   }
-  
+
+  // Capture references and nil them immediately to prevent races with
+  // setupCameraSensors: creating a new camera before async dispose runs.
+  SingleCameraPreview *cameraToDispose = self->_camera;
+  MultiCameraPreview *multiCameraToDispose = self->_multiCamera;
+  self->_camera = nil;
+  self->_multiCamera = nil;
+
+  // Fully dispose the camera (stops capture session, releases volume button handler,
+  // restores audio session to .playback so volume buttons control media volume).
+  dispatch_async(_dispatchQueue, ^{
+    if (multiCameraToDispose != nil) {
+      NSLog(@"CamerawesomePlugin: dispatching multiCamera dispose");
+      [multiCameraToDispose dispose];
+    } else if (cameraToDispose != nil) {
+      NSLog(@"CamerawesomePlugin: dispatching singleCamera dispose");
+      [cameraToDispose dispose];
+    }
+    NSLog(@"CamerawesomePlugin: dispose complete on dispatch queue");
+  });
+
   return @(YES);
 }
 

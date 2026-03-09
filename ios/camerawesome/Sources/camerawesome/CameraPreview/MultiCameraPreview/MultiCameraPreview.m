@@ -8,7 +8,9 @@
 #import "MultiCameraPreview.h"
 #import "SingleCameraPreview.h"
 
-@implementation MultiCameraPreview
+@implementation MultiCameraPreview {
+  BOOL _isDisposing;
+}
 
 - (instancetype)initWithSensors:(NSArray<PigeonSensor *> *)sensors
               mirrorFrontCamera:(BOOL)mirrorFrontCamera
@@ -87,25 +89,38 @@
   }
 }
 
-/// Handle AVCaptureSession stopped unexpectedly — restart to prevent frozen preview
+/// Handle AVCaptureSession stopped unexpectedly — restart to prevent frozen preview.
+/// Skipped during intentional disposal so volume buttons restore properly.
 - (void)handleSessionDidStopRunning:(NSNotification *)notification {
+  if (_isDisposing) {
+    NSLog(@"MultiCameraPreview: Session stopped during dispose — NOT restarting");
+    return;
+  }
   NSLog(@"AVCaptureSession stopped unexpectedly — restarting");
   dispatch_async(dispatch_get_main_queue(), ^{
-    [self->_cameraSession startRunning];
+    if (!self->_isDisposing) {
+      [self->_cameraSession startRunning];
+    }
   });
 }
 
 - (void)dispose {
-  [self stop];
-  [self cleanSession];
+  NSLog(@"MultiCameraPreview: dispose called — setting _isDisposing flag");
+  _isDisposing = YES;
 
-  // Remove session error observers
+  // Remove session observers (belt-and-suspenders with _isDisposing flag)
   [[NSNotificationCenter defaultCenter] removeObserver:self
                                                   name:AVCaptureSessionRuntimeErrorNotification
                                                 object:_cameraSession];
   [[NSNotificationCenter defaultCenter] removeObserver:self
                                                   name:AVCaptureSessionDidStopRunningNotification
                                                 object:_cameraSession];
+
+  [self stop];
+  NSLog(@"MultiCameraPreview: stopping physical button listener");
+  [self.physicalButtonController stopListening];
+  [self.motionController stopMotionDetection];
+  [self cleanSession];
 
   // Restore audio session to .playback so volume buttons work for media playback
   [SingleCameraPreview restorePlaybackAudioSession];

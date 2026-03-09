@@ -581,6 +581,8 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
     override fun stop(): Boolean {
         orientationStreamListener?.stop()
         cameraState.stop()
+        // Release volume button interception so buttons control media volume again
+        activity?.stopService(Intent(activity!!, PlayerService::class.java))
         return true
     }
 

@@ -9,6 +9,7 @@
 
 @implementation SingleCameraPreview {
   dispatch_queue_t _dispatchQueue;
+  BOOL _isDisposing;
 }
 
 - (instancetype)initWithCameraSensor:(PigeonSensorPosition)sensor
@@ -208,25 +209,27 @@
   }
 }
 
-/// Handle AVCaptureSession stopped unexpectedly — restart to prevent frozen preview
+/// Handle AVCaptureSession stopped unexpectedly — restart to prevent frozen preview.
+/// Skipped during intentional disposal so volume buttons restore properly.
 - (void)handleSessionDidStopRunning:(NSNotification *)notification {
+  if (_isDisposing) {
+    NSLog(@"SingleCameraPreview: Session stopped during dispose — NOT restarting");
+    return;
+  }
   NSLog(@"AVCaptureSession stopped unexpectedly — restarting");
   dispatch_async(dispatch_get_main_queue(), ^{
-    [self->_captureSession startRunning];
+    if (!self->_isDisposing) {
+      [self->_captureSession startRunning];
+    }
   });
 }
 
 - (void)dealloc {
+  // Safety net — dispose should have already been called, but guard
+  // against leaks if dealloc runs without a prior dispose.
   [self.motionController stopMotionDetection];
   [self.physicalButtonController stopListening];
-
-  // Remove session error observers
-  [[NSNotificationCenter defaultCenter] removeObserver:self
-                                                  name:AVCaptureSessionRuntimeErrorNotification
-                                                object:_captureSession];
-  [[NSNotificationCenter defaultCenter] removeObserver:self
-                                                  name:AVCaptureSessionDidStopRunningNotification
-                                                object:_captureSession];
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 /// Set camera preview size
@@ -317,8 +320,21 @@
 
 /// Dispose camera inputs & outputs
 - (void)dispose {
+  NSLog(@"SingleCameraPreview: dispose called — setting _isDisposing flag");
+  _isDisposing = YES;
+
+  // Remove session observers (belt-and-suspenders with _isDisposing flag)
+  [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                  name:AVCaptureSessionRuntimeErrorNotification
+                                                object:_captureSession];
+  [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                  name:AVCaptureSessionDidStopRunningNotification
+                                                object:_captureSession];
+
   [self stop];
+  NSLog(@"SingleCameraPreview: stopping physical button listener");
   [self.physicalButtonController stopListening];
+  [self.motionController stopMotionDetection];
 
   for (AVCaptureInput *input in [_captureSession inputs]) {
     [_captureSession removeInput:input];
@@ -328,7 +344,9 @@
   }
 
   // Restore audio session to .playback so volume buttons work for media playback
+  NSLog(@"SingleCameraPreview: restoring playback audio session");
   [SingleCameraPreview restorePlaybackAudioSession];
+  NSLog(@"SingleCameraPreview: dispose complete");
 }
 
 /// Set preview size resolution
