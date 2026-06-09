@@ -1,3 +1,8 @@
+# 2.7.2
+
+- Fix iOS orientation events never reaching Dart when a consumer subscribes before the camera is created: `setupCameraSensors` now re-attaches stored event sinks (orientation/image/physical, single- and multi-camera) right after creating the camera. The orientation `EventChannel` is broadcast, so its `onListen` fires only on the 0→1 listener transition; an early subscriber (e.g. one listening from a Flutter `initState`, before the first build) was previously orphaned with no chance to re-attach, leaving every orientation consumer dead for the whole camera session.
+- Seed orientation reliably on sink attach: `MotionController` now replays the current device orientation when a sink connects, so a late or re-wired subscriber learns the current orientation without waiting for a physical rotation (the change-only stream's one-shot Unknown→current emission is otherwise lost). Extracts the orientation→string mapping to a helper and guards against emitting an unmapped (face up/down) value.
+
 # 2.7.1
 
 - Fix build: import `SingleCameraPreview.h` in `MultiCameraPreview.m` instead of forward declaration (compiler needs full interface to resolve class method selectors)

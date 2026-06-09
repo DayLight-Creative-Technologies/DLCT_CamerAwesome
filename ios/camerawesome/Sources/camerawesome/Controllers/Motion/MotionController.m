@@ -18,6 +18,37 @@
 
 - (void)setOrientationEventSink:(FlutterEventSink)orientationEventSink {
   _orientationEventSink = orientationEventSink;
+
+  // Replay the current orientation to a sink that connects after the initial
+  // Unknown->current transition has already fired. That transition emits exactly
+  // once and the stream is change-only with no replay, so a late or re-wired
+  // subscriber would otherwise never learn the current orientation until the
+  // user physically rotates the device. This seeds orientation reliably
+  // regardless of when (or in which channel order) the sink attaches.
+  if (orientationEventSink != nil && _deviceOrientation != UIDeviceOrientationUnknown) {
+    NSString *orientationString = [self orientationStringForDeviceOrientation:_deviceOrientation];
+    if (orientationString != nil) {
+      orientationEventSink(orientationString);
+    }
+  }
+}
+
+/// Maps a gravity-derived device orientation to the orientation channel's string
+/// value. Returns nil for orientations the camera UI does not represent (face
+/// up/down) so callers can skip emitting an unmapped value to the Dart side.
+- (NSString *)orientationStringForDeviceOrientation:(UIDeviceOrientation)orientation {
+  switch (orientation) {
+    case UIDeviceOrientationLandscapeLeft:
+      return @"LANDSCAPE_LEFT";
+    case UIDeviceOrientationLandscapeRight:
+      return @"LANDSCAPE_RIGHT";
+    case UIDeviceOrientationPortrait:
+      return @"PORTRAIT_UP";
+    case UIDeviceOrientationPortraitUpsideDown:
+      return @"PORTRAIT_DOWN";
+    default:
+      return nil;
+  }
 }
 
 /// Start live motion detection
@@ -34,25 +65,9 @@
     }
     if (self->_deviceOrientation != newOrientation) {
       self->_deviceOrientation = newOrientation;
-      
-      NSString *orientationString;
-      switch (newOrientation) {
-        case UIDeviceOrientationLandscapeLeft:
-          orientationString = @"LANDSCAPE_LEFT";
-          break;
-        case UIDeviceOrientationLandscapeRight:
-          orientationString = @"LANDSCAPE_RIGHT";
-          break;
-        case UIDeviceOrientationPortrait:
-          orientationString = @"PORTRAIT_UP";
-          break;
-        case UIDeviceOrientationPortraitUpsideDown:
-          orientationString = @"PORTRAIT_DOWN";
-          break;
-        default:
-          break;
-      }
-      if (self->_orientationEventSink != nil) {
+
+      NSString *orientationString = [self orientationStringForDeviceOrientation:newOrientation];
+      if (self->_orientationEventSink != nil && orientationString != nil) {
         self->_orientationEventSink(orientationString);
       }
     }

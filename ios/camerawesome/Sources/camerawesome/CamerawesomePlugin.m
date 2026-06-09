@@ -144,7 +144,35 @@ FlutterEventSink physicalButtonEventSink;
     
     [self.texturesIds addObject:[NSNumber numberWithLongLong:textureId]];
   }
-  
+
+  // Re-wire any event sinks a Dart consumer subscribed to before the camera
+  // existed. onListenWithArguments stores the sink unconditionally but only
+  // forwards it to the camera when one is present; because the orientation
+  // EventChannel is a broadcast stream, its onListen fires only on the 0->1
+  // listener transition, so a subscriber that attaches before the camera is
+  // created (e.g. one listening from a Flutter initState, before the first
+  // build) would otherwise be orphaned with no chance to re-attach. This mirrors
+  // the wiring in onListenWithArguments, from the camera-creation side, so the
+  // sink is connected before the motion controller emits its first sample.
+  if (self.camera != nil) {
+    if (orientationEventSink != nil) {
+      [self.camera setOrientationEventSink:orientationEventSink];
+    }
+    if (imageStreamEventSink != nil) {
+      [self.camera setImageStreamEvent:imageStreamEventSink];
+    }
+    if (physicalButtonEventSink != nil) {
+      [self.camera setPhysicalButtonEventSink:physicalButtonEventSink];
+    }
+  } else if (self.multiCamera != nil) {
+    if (orientationEventSink != nil) {
+      [self.multiCamera setOrientationEventSink:orientationEventSink];
+    }
+    if (physicalButtonEventSink != nil) {
+      [self.multiCamera setPhysicalButtonEventSink:physicalButtonEventSink];
+    }
+  }
+
   completion(@(YES), nil);
 }
 
