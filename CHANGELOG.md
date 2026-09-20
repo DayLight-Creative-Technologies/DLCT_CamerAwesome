@@ -1,3 +1,7 @@
+# 2.7.2+dlct.1
+
+- Migrated the Android build to Flutter's built-in Kotlin support per the official plugin-author guide (https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors): removed the `kotlin-android` plugin application and the `kotlinOptions` block, and added a top-level `kotlin { compilerOptions { jvmTarget } }` block. Flutter warns that a future release will refuse to build apps whose plugins apply the Kotlin Gradle Plugin directly; this closes that warning for consuming apps on AGP 9 with `android.builtInKotlin=false`. Forward migration, not a workaround — no retire condition.
+
 # 2.7.2
 
 - Fix iOS orientation events never reaching Dart when a consumer subscribes before the camera is created: `setupCameraSensors` now re-attaches stored event sinks (orientation/image/physical, single- and multi-camera) right after creating the camera. The orientation `EventChannel` is broadcast, so its `onListen` fires only on the 0→1 listener transition; an early subscriber (e.g. one listening from a Flutter `initState`, before the first build) was previously orphaned with no chance to re-attach, leaving every orientation consumer dead for the whole camera session.
