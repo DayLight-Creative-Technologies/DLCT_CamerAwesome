@@ -12,12 +12,16 @@ let package = Package(
         .library(name: "camerawesome", targets: ["camerawesome"])
     ],
     dependencies: [
+        .package(name: "FlutterFramework", path: "../FlutterFramework"),
         .package(url: "https://github.com/jpsim/JPSVolumeButtonHandler.git", branch: "master")
     ],
     targets: [
         .target(
             name: "camerawesome",
-            dependencies: ["JPSVolumeButtonHandler"],
+            dependencies: [
+                .product(name: "FlutterFramework", package: "FlutterFramework"),
+                "JPSVolumeButtonHandler"
+            ],
             resources: [],
             publicHeadersPath: "",
             cSettings: [
