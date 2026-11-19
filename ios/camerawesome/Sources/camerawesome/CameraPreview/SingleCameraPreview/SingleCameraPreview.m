@@ -6,6 +6,7 @@
 //
 
 #import "SingleCameraPreview.h"
+#import "ZoomUtils.h"
 
 @implementation SingleCameraPreview {
   dispatch_queue_t _dispatchQueue;
@@ -296,26 +297,23 @@
   return _currentPreviewSize;
 }
 
-// Get min zoom level (< 1.0 on virtual multi-lens devices for ultra-wide)
+// Zoom getters report the DISPLAYED scale (the system Camera app's "1x" = wide-angle lens), not
+// raw videoZoomFactor: on a triple / dual-wide camera factor 1.0 is the ultra-wide (see ZoomUtils.h).
+
+// Get min zoom level (0.5 on a device with an ultra-wide lens)
 - (CGFloat)getMinZoom {
-  return _captureDevice.minAvailableVideoZoomFactor;
+  return [ZoomUtils deviceMinZoomFactor:_captureDevice] * [ZoomUtils displayMultiplierForDevice:_captureDevice];
 }
 
 // Get max zoom level (digital + optical combined)
 - (CGFloat)getMaxZoom {
-  CGFloat maxZoom = _captureDevice.activeFormat.videoMaxZoomFactor;
-  return maxZoom > 50.0 ? 50.0 : maxZoom;
+  return [ZoomUtils deviceMaxZoomFactor:_captureDevice] * [ZoomUtils displayMultiplierForDevice:_captureDevice];
 }
 
-// Get optical max zoom — the highest zoom factor before digital zoom begins.
-// On virtual multi-lens devices, this is the last lens switch-over point.
-// On single-lens devices, returns 1.0 (any zoom beyond 1x is digital).
+// Get optical max zoom — the highest zoom before digital zoom begins (the last lens switch-over;
+// 1.0 on a single-lens device).
 - (CGFloat)getOpticalMaxZoom {
-  NSArray<NSNumber *> *switchOvers = _captureDevice.virtualDeviceSwitchOverVideoZoomFactors;
-  if (switchOvers != nil && switchOvers.count > 0) {
-    return switchOvers.lastObject.doubleValue;
-  }
-  return 1.0;
+  return [ZoomUtils deviceOpticalMaxZoomFactor:_captureDevice] * [ZoomUtils displayMultiplierForDevice:_captureDevice];
 }
 
 /// Dispose camera inputs & outputs
@@ -468,12 +466,9 @@
   }
 }
 
-/// Set zoom level. Maps normalized 0.0-1.0 to the device's full zoom range (minZoom...maxZoom).
+/// Set zoom level. Maps normalized 0.0-1.0 linearly over the device's full zoom range.
 - (void)setZoom:(float)value error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
-  CGFloat minZoom = [self getMinZoom];
-  CGFloat maxZoom = [self getMaxZoom];
-  CGFloat scaledZoom = value * (maxZoom - minZoom) + minZoom;
-  scaledZoom = MAX(minZoom, MIN(maxZoom, scaledZoom));
+  CGFloat scaledZoom = [ZoomUtils deviceZoomFactorForNormalized:value device:_captureDevice];
 
   NSError *zoomError;
   if ([_captureDevice lockForConfiguration:&zoomError]) {
@@ -636,10 +631,7 @@
 // === SMOOTH ZOOM ===
 
 - (void)setSmoothZoom:(float)zoom rate:(float)rate completion:(void (^)(FlutterError * _Nullable))completion {
-  CGFloat minZoom = [self getMinZoom];
-  CGFloat maxZoom = [self getMaxZoom];
-  CGFloat scaledZoom = zoom * (maxZoom - minZoom) + minZoom;
-  scaledZoom = MAX(minZoom, MIN(maxZoom, scaledZoom));
+  CGFloat scaledZoom = [ZoomUtils deviceZoomFactorForNormalized:zoom device:_captureDevice];
 
   NSError *lockError;
   if ([_captureDevice lockForConfiguration:&lockError]) {

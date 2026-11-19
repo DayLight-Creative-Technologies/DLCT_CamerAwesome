@@ -381,17 +381,19 @@ class CamerawesomePlugin {
     return CameraInterface().setCorrection(brightness);
   }
 
-  /// returns the max zoom available on device
+  /// Returns the max zoom ratio available on the device, in the scale the system Camera app shows
+  /// (1.0 = the main wide-angle lens). Min, max and optical max share this scale; the normalized
+  /// zoom of [setZoom] / [setSmoothZoom] maps linearly between min and max.
   static Future<double?> getMaxZoom() {
     return CameraInterface().getMaxZoom();
   }
 
-  /// returns the min zoom available on device (< 1.0 on multi-lens devices for ultra-wide)
+  /// Returns the min zoom ratio available on the device (0.5 when the camera includes an ultra-wide lens).
   static Future<double?> getMinZoom() {
     return CameraInterface().getMinZoom();
   }
 
-  /// returns the highest optical zoom factor before digital zoom begins.
+  /// Returns the highest optical zoom ratio before digital zoom begins (same scale as [getMaxZoom]).
   /// On virtual multi-lens devices, this is the last lens switch-over point.
   /// On single-lens devices, returns 1.0.
   static Future<double?> getOpticalMaxZoom() {
