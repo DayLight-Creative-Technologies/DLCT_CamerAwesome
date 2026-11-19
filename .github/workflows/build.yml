@@ -53,8 +53,12 @@ jobs:
       - run: flutter --version
       - name: Build the example app with Swift Package Manager (iOS Simulator)
         working-directory: example
+        # pod install runs before the build: when `flutter build` installs the pods itself, Xcode has already
+        # read the workspace without the Pods project, so Runner links Pods_Runner before anything builds it
+        # ("Framework 'Pods_Runner' not found" on a fresh runner; a second build passes).
         run: |
           flutter pub get
+          (cd ios && pod install)
           flutter build ios --simulator --debug
       - name: Fail unless camerawesome linked through its Swift package
         working-directory: example
