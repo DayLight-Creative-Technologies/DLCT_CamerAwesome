@@ -21,6 +21,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.apparence.camerawesome.CamerawesomePlugin
 import com.apparence.camerawesome.models.FlashMode
 import com.apparence.camerawesome.sensors.SensorOrientation
+import com.apparence.camerawesome.utils.ZoomRatio
 import com.apparence.camerawesome.utils.isMultiCamSupported
 import io.flutter.plugin.common.EventChannel
 import io.flutter.view.TextureRegistry
@@ -361,21 +362,25 @@ data class CameraXState(
 
     private var zoomAnimator: ValueAnimator? = null
 
-    fun setLinearZoom(zoom: Float) {
-        mainCameraControl.setLinearZoom(zoom)
+    /** Normalized 0.0-1.0 zoom, linear in zoom ratio (see [ZoomRatio]). */
+    fun setNormalizedZoom(zoom: Float) {
+        mainCameraControl.setZoomRatio(zoomRatioForNormalized(zoom))
     }
 
     fun setSmoothZoom(targetZoom: Float, durationMs: Long) {
         zoomAnimator?.cancel()
-        val currentZoom = mainCameraInfos.zoomState.value?.linearZoom ?: 0f
-        val clampedTarget = targetZoom.coerceIn(0f, 1f)
-        zoomAnimator = ValueAnimator.ofFloat(currentZoom, clampedTarget).apply {
+        val currentRatio = mainCameraInfos.zoomState.value?.zoomRatio ?: minZoomRatio.toFloat()
+        val targetRatio = zoomRatioForNormalized(targetZoom)
+        zoomAnimator = ValueAnimator.ofFloat(currentRatio, targetRatio).apply {
             duration = durationMs
             interpolator = DecelerateInterpolator()
-            addUpdateListener { mainCameraControl.setLinearZoom(it.animatedValue as Float) }
+            addUpdateListener { mainCameraControl.setZoomRatio(it.animatedValue as Float) }
             start()
         }
     }
+
+    private fun zoomRatioForNormalized(zoom: Float): Float =
+        ZoomRatio.forNormalized(zoom, minZoomRatio.toFloat(), maxZoomRatio.toFloat())
 
     fun startFocusAndMetering(autoFocusAction: FocusMeteringAction) {
         mainCameraControl.startFocusAndMetering(autoFocusAction)

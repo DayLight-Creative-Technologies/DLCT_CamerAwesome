@@ -6,6 +6,7 @@
 //
 
 #import "MultiCameraPreview.h"
+#import "ZoomUtils.h"
 #import "SingleCameraPreview.h"
 
 @implementation MultiCameraPreview {
@@ -142,30 +143,27 @@
   [self.devices removeAllObjects];
 }
 
+// Zoom getters report the DISPLAYED scale, not raw videoZoomFactor (see ZoomUtils.h).
 - (CGFloat)getMinZoom {
-  return self.devices.firstObject.device.minAvailableVideoZoomFactor;
+  AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  return [ZoomUtils deviceMinZoomFactor:mainDevice] * [ZoomUtils displayMultiplierForDevice:mainDevice];
 }
 
 - (CGFloat)getMaxZoom {
-  CGFloat maxZoom = self.devices.firstObject.device.activeFormat.videoMaxZoomFactor;
-  return maxZoom > 50.0 ? 50.0 : maxZoom;
+  AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  return [ZoomUtils deviceMaxZoomFactor:mainDevice] * [ZoomUtils displayMultiplierForDevice:mainDevice];
 }
 
 - (CGFloat)getOpticalMaxZoom {
-  NSArray<NSNumber *> *switchOvers = self.devices.firstObject.device.virtualDeviceSwitchOverVideoZoomFactors;
-  if (switchOvers != nil && switchOvers.count > 0) {
-    return switchOvers.lastObject.doubleValue;
-  }
-  return 1.0;
+  AVCaptureDevice *mainDevice = self.devices.firstObject.device;
+  return [ZoomUtils deviceOpticalMaxZoomFactor:mainDevice] * [ZoomUtils displayMultiplierForDevice:mainDevice];
 }
 
 /// Set zoom level
 - (void)setZoom:(float)value error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
   AVCaptureDevice *mainDevice = self.devices.firstObject.device;
 
-  CGFloat minZoom = [self getMinZoom];
-  CGFloat maxZoom = [self getMaxZoom];
-  CGFloat scaledZoom = value * (maxZoom - minZoom) + minZoom;
+  CGFloat scaledZoom = [ZoomUtils deviceZoomFactorForNormalized:value device:mainDevice];
   
   NSError *zoomError;
   if ([mainDevice lockForConfiguration:&zoomError]) {
@@ -368,10 +366,7 @@
 
 - (void)setSmoothZoom:(float)zoom rate:(float)rate completion:(void (^)(FlutterError * _Nullable))completion {
   AVCaptureDevice *mainDevice = self.devices.firstObject.device;
-  CGFloat minZoom = [self getMinZoom];
-  CGFloat maxZoom = [self getMaxZoom];
-  CGFloat scaledZoom = zoom * (maxZoom - minZoom) + minZoom;
-  scaledZoom = MAX(minZoom, MIN(maxZoom, scaledZoom));
+  CGFloat scaledZoom = [ZoomUtils deviceZoomFactorForNormalized:zoom device:mainDevice];
 
   NSError *lockError;
   if ([mainDevice lockForConfiguration:&lockError]) {

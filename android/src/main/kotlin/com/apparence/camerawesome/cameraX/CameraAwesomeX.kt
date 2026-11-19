@@ -178,8 +178,10 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
             if (zoom > 0) {
                 // TODO Find a better way to set initial zoom than using a postDelayed
                 Handler(Looper.getMainLooper()).postDelayed({
-                    (cameraState.concurrentCamera?.cameras?.firstOrNull()
-                        ?: cameraState.previewCamera)?.cameraControl?.setLinearZoom(zoom.toFloat())
+                    // The camera may be unbound again by then (the previous code skipped it too).
+                    if (cameraState.previewCamera != null || cameraState.concurrentCamera != null) {
+                        cameraState.setNormalizedZoom(zoom.toFloat())
+                    }
                 }, 200)
             }
         }
@@ -610,7 +612,7 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
     }
 
     override fun setZoom(zoom: Double) {
-        cameraState.setLinearZoom(zoom.toFloat())
+        cameraState.setNormalizedZoom(zoom.toFloat())
     }
 
     @SuppressLint("RestrictedApi")
@@ -810,11 +812,6 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
         } catch (e: Exception) {
             callback(Result.failure(e))
         }
-    }
-
-    fun convertLinearToRatio(linear: Double): Double {
-        // TODO Not sure if this is correct
-        return linear * getMaxZoom() / getMinZoom()
     }
 
     @Deprecated("Use focusOnPoint instead")

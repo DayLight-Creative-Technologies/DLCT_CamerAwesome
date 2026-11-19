@@ -1,0 +1,51 @@
+name: Build the package
+
+# [DLCT] Runs the fork's own tests: the Dart tests and the native zoom-scale tests (2.7.2+dlct.2).
+# This repository is a GitHub fork, so a push may not start a run; dispatch one by hand when it does not:
+#   gh workflow run build.yml --repo DayLight-Creative-Technologies/DLCT_CamerAwesome --ref master
+# Job names are stable on purpose: a consumer gate may require them by name.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: "Unit tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/filter_test.dart
+
+  native-ios:
+    name: "Native unit tests (iOS)"
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ios/camerawesome/Tests/run_zoom_utils_tests.sh
+
+  native-android:
+    name: "Native unit tests (Android)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      # kotlinc ships on the ubuntu runner image.
+      - run: kotlinc -version
+      - run: android/src/test/run_zoom_ratio_tests.sh
