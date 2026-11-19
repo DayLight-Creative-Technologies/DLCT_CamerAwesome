@@ -1,3 +1,8 @@
+# 2.7.2+dlct.3
+
+- The Swift package declares its `FlutterFramework` dependency, as Flutter's guide for plugin authors requires (https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-plugin-authors). Without it, Flutter warns that the plugin "is missing a dependency on FlutterFramework" and says this will become an error.
+- CI: a `SwiftPM build (iOS)` job builds the example app with Swift Package Manager and fails unless camerawesome links through its Swift package. The example's pubspec turns SwiftPM on for that project only, and its Podfile post_install sets each pod's deployment target to 15.0, the lowest the current Xcode accepts.
+
 # 2.7.2+dlct.2
 
 - Zoom reports and applies the scale the system Camera app shows, on both platforms, so a consumer's "2x" is 2x. Root cause: on iOS the back camera is the virtual triple / dual-wide device, where `videoZoomFactor` 1.0 is the ultra-wide lens, yet `getMinZoom` / `getMaxZoom` / `getOpticalMaxZoom` returned raw device factors (1.0 / 6.0 on an iPhone 13 Pro), so an app labelling them as "1x-6x" showed the Camera app's 1x (wide lens) as "2x". iOS now returns display-scale values (device factor x `displayVideoZoomFactorMultiplier`; before iOS 18, 1 / the first lens switch-over when the device has an ultra-wide constituent): 0.5 / 3.0 / max x 0.5 on that phone. The device is still driven in its own scale; the normalized 0.0-1.0 zoom maps linearly over both, so photos, video and the preview are unchanged for a given normalized value. One owner: `ZoomUtils` (single- and multi-camera previews both use it).
